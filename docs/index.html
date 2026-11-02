@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1d5c3a">
+  <title>電話番AI</title>
+  <style>
+    :root {
+      --bg: #fdfaf3;
+      --text: #1f1f1f;
+      --muted: #555;
+      --primary: #1d5c3a;
+      --primary-active: #c0392b;
+      --card: #ffffff;
+      --border: #d8d2c4;
+      --ai-bg: #e8f3ec;
+      --me-bg: #fff4dc;
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 22px; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Meiryo", sans-serif;
+      line-height: 1.6;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+    h1 {
+      font-size: 1.6rem;
+      text-align: center;
+      margin: 8px 0 4px;
+      color: var(--primary);
+    }
+    .lead {
+      text-align: center;
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+    #log {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .msg {
+      padding: 14px 18px;
+      border-radius: 16px;
+      border: 2px solid var(--border);
+      font-size: 1.15rem;
+      word-break: break-word;
+    }
+    .msg .who {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--muted);
+    }
+    .msg.ai { background: var(--ai-bg); align-self: flex-start; }
+    .msg.me { background: var(--me-bg); align-self: flex-end; }
+    .msg.interim { opacity: 0.6; }
+    .controls {
+      position: sticky;
+      bottom: 0;
+      background: var(--bg);
+      border-top: 2px solid var(--border);
+      padding: 4px 0 8px;
+    }
+    #status {
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      min-height: 2em;
+      margin: 8px 0;
+    }
+    #mic {
+      display: block;
+      width: min(48vw, 34vh, 240px);
+      height: min(48vw, 34vh, 240px);
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #mic .icon { display: block; font-size: 4rem; line-height: 1.2; }
+    #mic:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,0.25); }
+    #mic.listening {
+      background: var(--primary-active);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    #mic:disabled { background: #888; cursor: not-allowed; animation: none; }
+    #mic:focus-visible { outline: 6px solid #f1c40f; outline-offset: 6px; }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.5); }
+      50% { box-shadow: 0 0 0 24px rgba(192,57,43,0); }
+    }
+    .error {
+      background: #fdecea;
+      border: 2px solid #c0392b;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--muted);
+      padding-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>☎ 電話番AI</h1>
+  <p class="lead">まるいボタンを押して、お話しください</p>
+
+  <div id="unsupported" class="error" hidden>
+    このブラウザは音声認識に対応していません。<br>
+    スマホは Chrome（Android）や Safari（iPhone）、パソコンは Chrome か Edge でお試しください。
+  </div>
+
+  <section id="log" aria-live="polite"></section>
+
+  <div class="controls">
+    <div id="status" role="status">ボタンを押すと、電話番AIがあいさつします</div>
+    <button id="mic" type="button" aria-label="話す">
+      <span class="icon" aria-hidden="true">🎤</span>
+      <span id="micLabel">話す</span>
+    </button>
+  </div>
+
+  <footer>ハッカソン試作版：いまは、お話しした言葉をそのまま繰り返してお返事します</footer>
+</main>
+
+<script>
+(() => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = document.getElementById('mic');
+  const micLabel = document.getElementById('micLabel');
+  const statusEl = document.getElementById('status');
+  const logEl = document.getElementById('log');
+
+  const GREETING = 'おはようございます。電話番AIです。今日の調子はいかがですか？';
+
+  let recognition = null;
+  let listening = false;
+  let gotFinal = false;
+  let interimEl = null;
+  let jaVoice = null;
+
+  // ---- 表示まわり ----
+  function setStatus(text) { statusEl.textContent = text; }
+
+  function addMessage(who, text, extraClass) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + who + (extraClass ? ' ' + extraClass : '');
+    const label = document.createElement('span');
+    label.className = 'who';
+    label.textContent = who === 'ai' ? '電話番AI' : 'あなた';
+    const body = document.createElement('span');
+    body.className = 'text';
+    body.textContent = text;
+    div.append(label, body);
+    logEl.appendChild(div);
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    return div;
+  }
+
+  function setListeningUI(on) {
+    listening = on;
+    micBtn.classList.toggle('listening', on);
+    micLabel.textContent = on ? '聞いています' : '話す';
+    micBtn.setAttribute('aria-label', on ? '聞き取りを止める' : '話す');
+  }
+
+  // ---- 音声合成 ----
+  function pickVoice() {
+    const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    jaVoice = voices.find(v => v.lang === 'ja-JP' && /Google|Kyoko|O-ren|Nanami/i.test(v.name))
+           || voices.find(v => v.lang && v.lang.replace('_', '-').startsWith('ja'))
+           || null;
+  }
+  if (window.speechSynthesis) {
+    pickVoice();
+    speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
+  }
+
+  function speak(text) {
+    return new Promise(resolve => {
+      if (!window.speechSynthesis) return resolve();
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ja-JP';
+      if (jaVoice) u.voice = jaVoice;
+      u.rate = 0.85;   // 高齢者向けにゆっくりめ
+      u.pitch = 1.0;
+      u.volume = 1.0;
+      u.onend = resolve;
+      u.onerror = resolve;
+      speechSynthesis.speak(u);
+    });
+  }
+
+  // iOS Safari はユーザー操作の中で一度 speak しないと後から読み上げできないため、無音で解錠しておく
+  let ttsUnlocked = false;
+  function unlockTTS() {
+    if (ttsUnlocked || !window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance('');
+    u.volume = 0;
+    speechSynthesis.speak(u);
+    ttsUnlocked = true;
+  }
+
+  // ---- 返事の生成（今はオウム返し。将来ここをAIに差し替える） ----
+  function makeReply(userText) {
+    return '「' + userText + '」ですね。お話ししてくださって、ありがとうございます。';
+  }
+
+  async function respond(userText) {
+    const reply = makeReply(userText);
+    addMessage('ai', reply);
+    setStatus('お返事しています…');
+    micBtn.disabled = true;
+    await speak(reply);
+    micBtn.disabled = false;
+    setStatus('もう一度話すときは、ボタンを押してください');
+  }
+
+  // ---- 音声認識 ----
+  function setupRecognition() {
+    const r = new SpeechRecognition();
+    r.lang = 'ja-JP';
+    r.interimResults = true;
+    r.continuous = false;
+    r.maxAlternatives = 1;
+
+    r.onstart = () => {
+      gotFinal = false;
+      setListeningUI(true);
+      setStatus('どうぞ、お話しください');
+    };
+
+    r.onresult = (event) => {
+      let interim = '';
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += t; else interim += t;
+      }
+      if (interim) {
+        if (!interimEl) interimEl = addMessage('me', interim, 'interim');
+        else interimEl.querySelector('.text').textContent = interim;
+      }
+      if (final) {
+        gotFinal = true;
+        if (interimEl) { interimEl.remove(); interimEl = null; }
+        addMessage('me', final.trim());
+        respond(final.trim());
+      }
+    };
+
+    r.onerror = (event) => {
+      const messages = {
+        'no-speech': '声が聞こえませんでした。もう一度ボタンを押してください',
+        'audio-capture': 'マイクが見つかりません',
+        'not-allowed': 'マイクの使用が許可されていません。ブラウザの設定で許可してください',
+        'service-not-allowed': 'マイクの使用が許可されていません。ブラウザの設定で許可してください',
+        'network': '通信がうまくいきませんでした。電波の良いところでお試しください',
+        'aborted': '聞き取りを止めました'
+      };
+      setStatus(messages[event.error] || ('うまく聞き取れませんでした（' + event.error + '）'));
+    };
+
+    r.onend = () => {
+      setListeningUI(false);
+      if (interimEl) {
+        // 確定結果が来ないまま終わった場合は途中結果を採用する
+        const text = interimEl.querySelector('.text').textContent.trim();
+        interimEl.remove();
+        interimEl = null;
+        if (!gotFinal && text) {
+          addMessage('me', text);
+          respond(text);
+        }
+      }
+    };
+    return r;
+  }
+
+  // ---- 起動 ----
+  if (!SpeechRecognition) {
+    document.getElementById('unsupported').hidden = false;
+    micBtn.disabled = true;
+    setStatus('');
+    return;
+  }
+
+  let greeted = false;
+  micBtn.addEventListener('click', async () => {
+    unlockTTS();
+    if (listening) { recognition && recognition.stop(); return; }
+
+    if (!greeted) {
+      // 最初の1回は電話番AIからのあいさつ（毎朝の電話のイメージ）
+      greeted = true;
+      addMessage('ai', GREETING);
+      micBtn.disabled = true;
+      setStatus('お話ししています…');
+      await speak(GREETING);
+      micBtn.disabled = false;
+      // iPhone では音声認識の開始にボタン操作が必要なため、ここで一度止めてもう一度押してもらう
+      setStatus('ボタンを押して、お返事してください');
+      return;
+    }
+
+    speechSynthesis.cancel();
+    recognition = setupRecognition();
+    try {
+      recognition.start();
+    } catch (e) {
+      setStatus('もう一度ボタンを押してください');
+    }
+  });
+})();
+</script>
+</body>
+</html>

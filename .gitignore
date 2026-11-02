@@ -1,0 +1,38 @@
+# 秘密情報（APIキー・電話番号・個人情報など）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials*.json
+service-account*.json
+
+# 高齢者の個人データ・通話記録（絶対にコミットしない）
+data/private/
+recordings/
+*.wav
+*.mp3
+
+# 依存関係・ビルド成果物
+node_modules/
+dist/
+build/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# ログ
+*.log
+npm-debug.log*
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Claude Code ローカル設定
+.claude/settings.local.json
