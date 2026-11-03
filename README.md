@@ -32,7 +32,7 @@
 - API キーはサーバーの環境変数 `ANTHROPIC_API_KEY` からだけ読みます。ブラウザには出しません
 - 合言葉 `ACCESS_PASSCODE` を知っている人だけが使えます（画面で一度入れると、その端末に保存されます）
 - システムプロンプトとツール定義は `docs/conversation-design.md` から直接読み込みます。会話設計を書きかえれば、AI の話し方も変わります
-- `notify_family`（家族への通知）は、いまはデモです。画面に「お知らせ（デモ）」と表示するだけで、LINE には送りません
+- `notify_family`（家族への通知）は LINE で送ります。緊急はその場で、体調が悪いという話はお電話のあとに1通にまとめて送ります。LINE の設定が空なら送らず、画面に表示するだけです
 - 文字入力欄があるので、声を出さなくても試せます
 
 ### 環境変数
@@ -44,6 +44,8 @@
 | `AI_MODEL` | AI の種類。空なら `claude-haiku-5-5`。比べるときは `claude-sonnet-5-5` |
 | `AI_EFFORT` | 考える深さ（`low` / `medium` / `high`）。空なら `low`（速さ優先） |
 | `AI_NAME` / `USER_NAME` / `FAMILY_NAME` / `USER_NOTES` / `WEATHER` | 人物の設定。空なら `lib/profile.js` の架空のデモ用の値 |
+| `LINE_CHANNEL_ACCESS_TOKEN` | LINE のチャネルアクセストークン（長期）。空なら LINE は送らない |
+| `LINE_TO_USER_IDS` | 送り先のユーザーID（カンマ区切り）。空なら公式アカウントの友だち全員 |
 | `ALLOWED_ORIGINS` | GitHub Pages 版の画面から呼ぶときの許可先。空なら `https://shogomatsu.github.io` |
 
 実際のご家族の名前は `lib/profile.js` に書かず、Vercel の環境変数（手元なら `.env`）に入れてください。
@@ -85,6 +87,7 @@ npm run dev
 api/chat.js                 Claude につなぐ窓口（Vercel の関数）
 lib/prompt.js               会話設計からシステムプロンプトとツールを読み込む
 lib/profile.js              人物の設定（架空のデモ用の値）
+lib/line.js                 ご家族への LINE 通知
 docs/index.html             音声会話デモの画面
 docs/conversation-design.md 毎朝の電話の会話設計（システムプロンプト）
 dev-server.js               手元で試すためのサーバー

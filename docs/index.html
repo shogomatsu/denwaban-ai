@@ -417,8 +417,16 @@
     }
 
     (data.notifications || []).forEach(n => {
-      const head = n.level === 'urgent' ? '【至急】ご家族に知らせました：' : 'ご家族に知らせました：';
+      const head = n.level === 'urgent' ? '【至急】ご家族に知らせます：' : 'お電話のあと、ご家族に知らせます：';
       addMessage('note', head + '「' + n.quote + '」 ' + n.summary, n.level === 'urgent' ? 'urgent' : '');
+    });
+    (data.lineResults || []).forEach(r => {
+      const head = r.sent
+        ? 'LINEでご家族に送りました：'
+        : r.reason === 'not_configured'
+          ? 'LINEはまだ設定されていないため、送っていません（送る文）：'
+          : 'LINEを送れませんでした（送る文）：';
+      addMessage('note', head + r.text, r.level === 'urgent' ? 'urgent' : '');
     });
     if (data.model) {
       speedInfo.textContent = '（' + data.model + '・' + (data.elapsedMs / 1000).toFixed(1) + '秒）';

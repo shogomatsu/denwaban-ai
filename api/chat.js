@@ -8,6 +8,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getProfile } from '../lib/profile.js';
+import { buildFamilyMessage, sendFamilyLine } from '../lib/line.js';
 import { buildSystemPrompt, getTools, todayInJapan } from '../lib/prompt.js';
 
 // 電話がつながった合図（画面には出しません）。これを受けて AI があいさつします。
@@ -73,13 +74,15 @@ export default async function handler(req, res) {
   // ---- Claude を呼ぶ ----
   const model = process.env.AI_MODEL || 'claude-haiku-5-5';
   const effort = process.env.AI_EFFORT || 'low';
-  const system = buildSystemPrompt(getProfile(), callDate);
+  const profile = getProfile();
+  const system = buildSystemPrompt(profile, callDate);
   const tools = getTools();
   const client = new Anthropic();
 
   const startedAt = Date.now();
   const replyParts = [];
   const notifications = [];
+  const lineResults = []; // LINE に送った（送ろうとした）お知らせ
   let ended = false;
   let endReport = null;
   let refused = false;
@@ -114,7 +117,8 @@ export default async function handler(req, res) {
       const toolResults = [];
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
-        toolResults.push(runTool(block, { notifications, onEnd: (report) => { ended = true; endReport = report; } }));
+        const ctx = { notifications, lineResults, profile, messages, onEnd: (report) => { ended = true; endReport = report; } };
+        toolResults.push(await runTool(block, ctx));
       }
       messages.push({ role: 'user', content: toolResults });
 
@@ -132,6 +136,7 @@ export default async function handler(req, res) {
     messages,
     callDate,
     notifications,
+    lineResults,
     ended,
     endReport,
     refused,
@@ -141,7 +146,10 @@ export default async function handler(req, res) {
 }
 
 // ---- ツール ----
-function runTool(block, { notifications, onEnd }) {
+// 通知のタイミング（会話設計「4. 家族へのLINE通知」のとおり）
+// - urgent（緊急）：その場ですぐに LINE を送る
+// - concern（体調が悪いと言った）：お電話のあと（end_call のとき）に、まとめて1通送る
+async function runTool(block, { notifications, lineResults, profile, messages, onEnd }) {
   const input = block.input || {};
   if (block.name === 'notify_family') {
     const note = {
@@ -150,8 +158,11 @@ function runTool(block, { notifications, onEnd }) {
       summary: String(input.summary || ''),
     };
     notifications.push(note);
-    // TODO: ここで実際に LINE へ送る（いまはデモなので記録だけ）
     console.log('[notify_family]', JSON.stringify(note));
+    if (note.level === 'urgent') {
+      const text = buildFamilyMessage(note, profile);
+      lineResults.push({ level: 'urgent', text, ...(await sendFamilyLine(text)) });
+    }
     return { type: 'tool_result', tool_use_id: block.id, content: 'ご家族への通知を受け付けました。' };
   }
   if (block.name === 'end_call') {
@@ -162,9 +173,31 @@ function runTool(block, { notifications, onEnd }) {
       summary: input.summary || '',
     });
     console.log('[end_call]', JSON.stringify(input));
+
+    // この通話で出た「体調が悪い」の言葉を集めて、1通にまとめて送る
+    const quotes = collectConcernQuotes(messages);
+    if (quotes.length) {
+      const text = buildFamilyMessage({ level: 'concern', quote: quotes.join('』『') }, profile);
+      lineResults.push({ level: 'concern', text, ...(await sendFamilyLine(text)) });
+    }
     return { type: 'tool_result', tool_use_id: block.id, content: '通話を終了しました。' };
   }
   return { type: 'tool_result', tool_use_id: block.id, content: `不明なツールです：${block.name}`, is_error: true };
+}
+
+// 会話の中の notify_family（concern）の言葉を、出てきた順に集める（同じ言葉は1回だけ）
+function collectConcernQuotes(messages) {
+  const quotes = [];
+  for (const m of messages) {
+    if (m.role !== 'assistant' || !Array.isArray(m.content)) continue;
+    for (const b of m.content) {
+      if (b.type === 'tool_use' && b.name === 'notify_family' && b.input?.level !== 'urgent' && b.input?.quote) {
+        const q = String(b.input.quote).replace(/^[「『]|[」』]$/g, '');
+        if (!quotes.includes(q)) quotes.push(q);
+      }
+    }
+  }
+  return quotes;
 }
 
 // ---- 小さな道具 ----

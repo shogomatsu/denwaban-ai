@@ -30,6 +30,7 @@
 │   └── chat.js         # Claude API を呼ぶ窓口。合言葉（ACCESS_PASSCODE）で保護
 ├── lib/
 │   ├── prompt.js       # conversation-design.md からシステムプロンプトとツール定義を読む
+│   ├── line.js         # ご家族への LINE 通知
 │   └── profile.js      # 人物設定（架空のデモ値。実値は環境変数で上書き）
 └── docs/               # 画面（Vercel と GitHub Pages で公開）
     ├── index.html      # 音声会話のデモ（1ファイル完結）
@@ -42,7 +43,8 @@
   - 履歴は追記のみ。途中の書きかえ・システムプロンプトの変更をしない（通話中は `callDate` を固定）。
 - モデルは環境変数 `AI_MODEL`（既定 `claude-haiku-5-5`）、考える深さは `AI_EFFORT`（既定 `low`）。
   - `CLAUDE_` で始まる名前は Claude Code 自身が使うことがあるので避ける。
-- `notify_family` は今はデモ（画面表示とログのみ）。実際の LINE 送信は今後 `api/chat.js` の `runTool()` に足す。
+- `notify_family` → `lib/line.js` で LINE Messaging API に送る。urgent はその場で、concern は `end_call` のときに1通にまとめて送る。
+  - `LINE_CHANNEL_ACCESS_TOKEN` が空なら送らず画面表示だけ。`LINE_TO_USER_IDS` が空なら友だち全員（broadcast）、あればその人だけ（multicast）。
 - Twilio の着信窓口は `api/` にファイルを追加して同じ Vercel プロジェクトで動かす予定。
 
 ## 開発方針
