@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "outputDirectory": "docs",
+  "functions": {
+    "api/chat.js": {
+      "maxDuration": 30,
+      "includeFiles": "docs/conversation-design.md"
+    }
+  }
+}

@@ -16,23 +16,34 @@
 - **関係者**：本人／離れて暮らす家族／民生委員・地域包括支援センター／手伝ってくれる地域住民（ボランティア・近所の人）
 - **フェーズ**：ハッカソン用プロトタイプ
 
-## 現在の構成（ステップ1）
+## 現在の構成（ステップ2）
 
 ```
 .
-├── CLAUDE.md        # このファイル
+├── CLAUDE.md
 ├── README.md
-├── .gitignore
-└── docs/            # GitHub Pages で公開する静的サイト
-    ├── index.html   # 音声会話のデモ（1ファイル完結）
+├── package.json        # 依存は @anthropic-ai/sdk のみ
+├── vercel.json         # Vercel：docs/ を静的公開、api/ を関数として公開
+├── .env.example        # 環境変数の見本（.env はコミットしない）
+├── dev-server.js       # ローカル確認用（npm run dev → http://localhost:3000）
+├── api/
+│   └── chat.js         # Claude API を呼ぶ窓口。合言葉（ACCESS_PASSCODE）で保護
+├── lib/
+│   ├── prompt.js       # conversation-design.md からシステムプロンプトとツール定義を読む
+│   └── profile.js      # 人物設定（架空のデモ値。実値は環境変数で上書き）
+└── docs/               # 画面（Vercel と GitHub Pages で公開）
+    ├── index.html      # 音声会話のデモ（1ファイル完結）
+    ├── conversation-design.md  # 会話設計。システムプロンプトの元
     └── .nojekyll
 ```
 
-- `docs/index.html` は **Web Speech API**（`SpeechRecognition` / `speechSynthesis`）だけで動く 1 ページのデモ。
-  - マイクボタン → 日本語音声認識 → 仮の返事（オウム返し）→ 日本語音声合成で読み上げ。
-  - 返事の生成は `makeReply()` 関数に集約しており、将来ここを AI 応答に差し替える。
-- ビルド工程なし・外部ライブラリなし・外部 API なし。HTML/CSS/JS を 1 ファイルにまとめる。
-- GitHub Pages（`main` ブランチの `/docs` フォルダ）で公開する。音声認識は HTTPS が必須なので、ローカルでは `localhost` で確認する。
+- `docs/index.html` の `makeReply()` が `/api/chat` を呼び、Claude の返事を読み上げる。文字入力欄でも話せる。
+- サーバーは会話を保存しない。会話履歴（thinking ブロックを含む）はブラウザが持ち、毎回そのまま送り返す。
+  - 履歴は追記のみ。途中の書きかえ・システムプロンプトの変更をしない（通話中は `callDate` を固定）。
+- モデルは環境変数 `AI_MODEL`（既定 `claude-haiku-5-5`）、考える深さは `AI_EFFORT`（既定 `low`）。
+  - `CLAUDE_` で始まる名前は Claude Code 自身が使うことがあるので避ける。
+- `notify_family` は今はデモ（画面表示とログのみ）。実際の LINE 送信は今後 `api/chat.js` の `runTool()` に足す。
+- Twilio の着信窓口は `api/` にファイルを追加して同じ Vercel プロジェクトで動かす予定。
 
 ## 開発方針
 
@@ -49,8 +60,8 @@
 - Firefox は音声認識非対応 → 非対応メッセージを表示する。
 
 ### 外部サービス・API
-- **ステップ1では外部 API を使わない**（Web Speech API のみ）。
-  - ただし Chrome の音声認識は音声を Google のサーバーに送って処理する（ブラウザ標準機能のため自前の API 呼び出しは不要）。「端末内だけで処理」とは書かないこと。
+- 外部 API は Claude API（サーバー経由）のみ。
+  - Web Speech API について：Chrome の音声認識は音声を Google のサーバーに送って処理する（ブラウザ標準機能のため自前の API 呼び出しは不要）。「端末内だけで処理」とは書かないこと。
 - 今後、AI 応答（LLM）・電話発信（例：Twilio など）・データ保存を追加する場合は、
   - API キーなどの秘密情報は必ず `.env` に置き、**絶対にコミットしない**（`.gitignore` 済み）。
   - キーはフロントエンド（`docs/`）に埋め込まない。必要ならサーバー側／サーバーレス関数を経由する。
@@ -69,7 +80,7 @@
 ## 今後のロードマップ（案）
 
 1. ✅ ブラウザで音声会話のデモ（オウム返し）
-2. 返事を LLM に差し替え（体調確認の質問フロー、困りごとの聞き取り）
+2. ✅ 返事を LLM に差し替え（体調確認の質問フロー、困りごとの聞き取り）
 3. 会話から「見守りサイン」「困りごと（買い物・通院・農作業）」を構造化して抽出
 4. 家族・見守り担当向けの簡単なダッシュボード
 5. 地域の手伝い手とのマッチング（登録・通知）

@@ -85,8 +85,8 @@
     }
     #mic {
       display: block;
-      width: min(48vw, 34vh, 240px);
-      height: min(48vw, 34vh, 240px);
+      width: min(44vw, 28vh, 220px);
+      height: min(44vw, 28vh, 220px);
       margin: 0 auto 12px;
       border-radius: 50%;
       border: none;
@@ -118,6 +118,59 @@
       padding: 12px 16px;
       margin-bottom: 12px;
     }
+    .msg.note {
+      background: #fff;
+      border-style: dashed;
+      align-self: stretch;
+      font-size: 1rem;
+    }
+    .msg.note.urgent { border-color: #c0392b; background: #fdecea; }
+    /* 文字で話す欄・合言葉の欄 */
+    .text-form, .pass-form {
+      display: flex;
+      gap: 8px;
+      margin: 0 0 8px;
+    }
+    .text-form label, .pass-form label {
+      position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);
+    }
+    .text-form input, .pass-form input {
+      flex: 1;
+      min-width: 0;
+      min-height: 60px;
+      font-size: 1.1rem;
+      padding: 8px 12px;
+      border: 2px solid var(--muted);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--text);
+    }
+    .text-form button, .pass-form button {
+      min-width: 96px;
+      min-height: 60px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+    }
+    .text-form button:disabled { background: #888; cursor: not-allowed; }
+    .pass-box {
+      background: var(--card);
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+    .pass-box p { margin: 0 0 8px; }
+    .sub-label {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin: 0 0 4px;
+    }
     footer {
       text-align: center;
       font-size: 0.7rem;
@@ -136,6 +189,15 @@
     スマホは Chrome（Android）や Safari（iPhone）、パソコンは Chrome か Edge でお試しください。
   </div>
 
+  <div id="passBox" class="pass-box" hidden>
+    <p>はじめに、合言葉を入れてください。</p>
+    <form id="passForm" class="pass-form">
+      <label for="passInput">合言葉</label>
+      <input id="passInput" type="password" autocomplete="current-password" placeholder="合言葉">
+      <button type="submit">決定</button>
+    </form>
+  </div>
+
   <section id="log" aria-live="polite"></section>
 
   <div class="controls">
@@ -144,9 +206,18 @@
       <span class="icon" aria-hidden="true">🎤</span>
       <span id="micLabel">話す</span>
     </button>
+    <p class="sub-label">文字でも話せます（入れて「送る」）</p>
+    <form id="textForm" class="text-form">
+      <label for="textInput">文字で話す</label>
+      <input id="textInput" type="text" enterkeyhint="send" autocomplete="off" placeholder="例：元気よ。今日は畑に行くと">
+      <button id="sendBtn" type="submit">送る</button>
+    </form>
   </div>
 
-  <footer>ハッカソン試作版：いまは、お話しした言葉をそのまま繰り返してお返事します</footer>
+  <footer>
+    ハッカソン試作版：お返事は AI（Claude）が作っています。架空の人物の設定で動いています。本当の個人情報は話さないでください。
+    <span id="speedInfo"></span>
+  </footer>
 </main>
 
 <script>
@@ -156,8 +227,55 @@
   const micLabel = document.getElementById('micLabel');
   const statusEl = document.getElementById('status');
   const logEl = document.getElementById('log');
+  const textForm = document.getElementById('textForm');
+  const textInput = document.getElementById('textInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const passBox = document.getElementById('passBox');
+  const passForm = document.getElementById('passForm');
+  const passInput = document.getElementById('passInput');
+  const speedInfo = document.getElementById('speedInfo');
 
+  // ---- サーバー（Claude につなぐ窓口）の場所 ----
+  // Vercel で開いたときは、同じ場所の /api/chat を使う。
+  // GitHub Pages で開いたときは、下の '' に Vercel のアドレス（例：https://denwaban-ai.vercel.app）を入れる。
+  const VERCEL_URL_FOR_GITHUB_PAGES = '';
+  const API_URL = (location.hostname.endsWith('github.io') ? VERCEL_URL_FOR_GITHUB_PAGES : '') + '/api/chat';
+
+  // サーバーにつながらないときの、予備のあいさつ
   const GREETING = 'おはようございます。電話番AIです。今日の調子はいかがですか？';
+
+  // ---- 通話の状態 ----
+  let history = [];      // Claude との会話（サーバーから返ってきたものをそのまま持つ）
+  let callDate = '';     // 通話の日付（通話の途中で変えない）
+  let callStarted = false;
+  let callEnded = false;
+  let busy = false;
+
+  // ---- 合言葉（この端末のブラウザにだけ保存）----
+  const PASS_KEY = 'denwaban-passcode';
+  function loadPasscode() {
+    try { return localStorage.getItem(PASS_KEY) || ''; } catch (e) { return ''; }
+  }
+  function savePasscode(v) {
+    try { v ? localStorage.setItem(PASS_KEY, v) : localStorage.removeItem(PASS_KEY); } catch (e) { /* 保存できなくても動く */ }
+  }
+  let passcode = loadPasscode();
+  function showPassBox(message) {
+    passBox.hidden = false;
+    if (message) passBox.querySelector('p').textContent = message;
+    passInput.focus();
+  }
+  passForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = passInput.value.trim();
+    if (!v) return;
+    passcode = v;
+    savePasscode(v);
+    passInput.value = '';
+    passBox.hidden = true;
+    setStatus('合言葉を入れました。ボタンを押してください');
+  });
+  if (!passcode) showPassBox();
 
   let recognition = null;
   let listening = false;
@@ -173,7 +291,7 @@
     div.className = 'msg ' + who + (extraClass ? ' ' + extraClass : '');
     const label = document.createElement('span');
     label.className = 'who';
-    label.textContent = who === 'ai' ? '電話番AI' : 'あなた';
+    label.textContent = who === 'ai' ? '電話番AI' : who === 'note' ? 'お知らせ（デモ）' : 'あなた';
     const body = document.createElement('span');
     body.className = 'text';
     body.textContent = text;
@@ -228,20 +346,120 @@
     ttsUnlocked = true;
   }
 
-  // ---- 返事の生成（今はオウム返し。将来ここをAIに差し替える） ----
-  function makeReply(userText) {
-    return '「' + userText + '」ですね。お話ししてくださって、ありがとうございます。';
+  // ---- 返事の生成（サーバー経由で Claude に聞く） ----
+  // userText が空なら「電話がつながった」として、AI からのあいさつをもらう
+  async function makeReply(userText) {
+    if (!passcode) {
+      const err = new Error('合言葉を入れてください');
+      err.needPasscode = true;
+      throw err;
+    }
+    let res;
+    try {
+      res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Passcode': passcode },
+        body: JSON.stringify({ messages: history, text: userText || '', callDate }),
+      });
+    } catch (e) {
+      throw new Error('サーバーにつながりませんでした。電波の良いところで、もう一度お試しください');
+    }
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* 中身が読めないときは下で扱う */ }
+    if (res.status === 401) {
+      const err = new Error(data.error || '合言葉がちがいます');
+      err.needPasscode = true;
+      throw err;
+    }
+    if (!res.ok) throw new Error(data.error || ('うまくつながりませんでした（' + res.status + '）'));
+
+    history = data.messages || history;
+    callDate = data.callDate || callDate;
+    return data;
   }
 
-  async function respond(userText) {
-    const reply = makeReply(userText);
-    addMessage('ai', reply);
-    setStatus('お返事しています…');
-    micBtn.disabled = true;
-    await speak(reply);
-    micBtn.disabled = false;
-    setStatus('もう一度話すときは、ボタンを押してください');
+  function setBusy(on) {
+    busy = on;
+    micBtn.disabled = on || !SpeechRecognition;
+    sendBtn.disabled = on;
   }
+
+  function resetCall() {
+    history = [];
+    callDate = '';
+    callStarted = false;
+    callEnded = false;
+  }
+
+  // userText を Claude に送って、返事を表示・読み上げる
+  async function respond(userText) {
+    if (busy) return;
+    if (callEnded) resetCall();
+    callStarted = true;
+    setBusy(true);
+    setStatus('考えています…');
+
+    let data;
+    try {
+      data = await makeReply(userText);
+    } catch (e) {
+      setBusy(false);
+      if (e.needPasscode) {
+        passcode = '';
+        savePasscode('');
+        showPassBox(e.message + '。もう一度入れてください。');
+        setStatus('合言葉を入れてから、もう一度お試しください');
+      } else {
+        setStatus(e.message);
+      }
+      if (!userText && !history.length) callStarted = false;
+      return false;
+    }
+
+    (data.notifications || []).forEach(n => {
+      const head = n.level === 'urgent' ? '【至急】ご家族に知らせました：' : 'ご家族に知らせました：';
+      addMessage('note', head + '「' + n.quote + '」 ' + n.summary, n.level === 'urgent' ? 'urgent' : '');
+    });
+    if (data.model) {
+      speedInfo.textContent = '（' + data.model + '・' + (data.elapsedMs / 1000).toFixed(1) + '秒）';
+    }
+
+    if (data.reply) {
+      addMessage('ai', data.reply);
+      setStatus('お返事しています…');
+      await speak(data.reply);
+    }
+    setBusy(false);
+
+    if (data.ended) {
+      callEnded = true;
+      setStatus('お電話が終わりました。もう一度かけるときは、ボタンを押してください');
+    } else {
+      setStatus(SpeechRecognition
+        ? 'もう一度話すときは、ボタンを押してください'
+        : '文字を入れて「送る」を押してください');
+    }
+    return true;
+  }
+
+  // ---- 文字で話す ----
+  textForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = textInput.value.trim();
+    if (!text || busy) return;
+    unlockTTS();
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    if (listening && recognition) recognition.abort();
+    if (callEnded) { resetCall(); logEl.textContent = ''; }
+    textInput.value = '';
+    const myMsg = addMessage('me', text);
+    const ok = await respond(text);
+    if (!ok) {
+      // 送れなかったときは、入れた文字を欄に戻して、もう一度送れるようにする
+      myMsg.remove();
+      textInput.value = text;
+    }
+  });
 
   // ---- 音声認識 ----
   function setupRecognition() {
@@ -306,27 +524,31 @@
 
   // ---- 起動 ----
   if (!SpeechRecognition) {
+    // 音声認識が使えなくても、文字で話すことはできる
     document.getElementById('unsupported').hidden = false;
     micBtn.disabled = true;
-    setStatus('');
+    setStatus('文字を入れて「送る」を押すと、お話しできます');
     return;
   }
 
-  let greeted = false;
   micBtn.addEventListener('click', async () => {
     unlockTTS();
     if (listening) { recognition && recognition.stop(); return; }
+    if (busy) return;
 
-    if (!greeted) {
+    if (!callStarted || callEnded) {
       // 最初の1回は電話番AIからのあいさつ（毎朝の電話のイメージ）
-      greeted = true;
-      addMessage('ai', GREETING);
-      micBtn.disabled = true;
-      setStatus('お話ししています…');
-      await speak(GREETING);
-      micBtn.disabled = false;
-      // iPhone では音声認識の開始にボタン操作が必要なため、ここで一度止めてもう一度押してもらう
-      setStatus('ボタンを押して、お返事してください');
+      if (callEnded) { resetCall(); logEl.textContent = ''; }
+      const ok = await respond('');
+      if (!ok && passcode) {
+        // サーバーにつながらないときは、予備のあいさつだけ読み上げる
+        addMessage('ai', GREETING);
+        await speak(GREETING);
+      }
+      if (ok && !callEnded) {
+        // iPhone では音声認識の開始にボタン操作が必要なため、ここで一度止めてもう一度押してもらう
+        setStatus('ボタンを押して、お返事してください');
+      }
       return;
     }
 
