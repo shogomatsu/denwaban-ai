@@ -36,3 +36,6 @@ Thumbs.db
 
 # Claude Code ローカル設定
 .claude/settings.local.json
+
+# Vercel のローカル設定
+.vercel/

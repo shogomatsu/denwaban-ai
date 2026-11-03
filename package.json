@@ -1,0 +1,15 @@
+{
+  "name": "denwaban-ai",
+  "private": true,
+  "type": "module",
+  "description": "電話番AI（ハッカソン試作）",
+  "scripts": {
+    "dev": "node dev-server.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0"
+  }
+}
