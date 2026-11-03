@@ -358,7 +358,7 @@
     try {
       res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Passcode': passcode },
+        headers: { 'Content-Type': 'application/json', 'X-Passcode': encodeURIComponent(passcode) },
         body: JSON.stringify({ messages: history, text: userText || '', callDate }),
       });
     } catch (e) {
