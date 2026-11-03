@@ -13,6 +13,7 @@ import path from 'node:path';
 if (existsSync('.env')) process.loadEnvFile('.env');
 
 const { default: chatHandler } = await import('./api/chat.js');
+const { default: lineWebhookHandler } = await import('./api/line-webhook.js');
 
 const PORT = Number(process.env.PORT) || 3000;
 const DOCS_DIR = path.resolve('docs');
@@ -29,12 +30,14 @@ const TYPES = {
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
-  if (url.pathname === '/api/chat') {
+  const apiHandlers = { '/api/chat': chatHandler, '/api/line-webhook': lineWebhookHandler };
+  if (apiHandlers[url.pathname]) {
     let raw = '';
     for await (const chunk of req) raw += chunk;
     req.body = raw;
+    req.rawBody = raw;
     try {
-      await chatHandler(req, res);
+      await apiHandlers[url.pathname](req, res);
     } catch (e) {
       console.error(e);
       if (!res.headersSent) res.statusCode = 500;

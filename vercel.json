@@ -4,8 +4,11 @@
   "outputDirectory": "docs",
   "functions": {
     "api/chat.js": {
-      "maxDuration": 30,
+      "maxDuration": 60,
       "includeFiles": "docs/conversation-design.md"
+    },
+    "api/line-webhook.js": {
+      "maxDuration": 60
     }
   }
 }

@@ -70,3 +70,7 @@ select * from (values
   ('田中さん', array['通院の送り迎え','家の中の力仕事'],     '国見町', '火・木の午前', true)
 ) as v(display_name, can_do, area, available, has_car)
 where not exists (select 1 from helpers);
+
+-- ---- v2.1 で追加（すでに上を実行した人は、ここから下だけを実行すればよい） ----
+-- 調整係が、協力者ごとに「合う・合わない」と理由を残す
+alter table help_requests add column if not exists assessments jsonb;

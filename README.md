@@ -48,6 +48,9 @@
 | `USER_AREA` | 本人の地区（例：国見町）。協力者を探すときに使う |
 | `LINE_CHANNEL_ACCESS_TOKEN` | LINE のチャネルアクセストークン（長期）。空なら LINE は送らない |
 | `LINE_TO_USER_IDS` | 送り先のユーザーID（カンマ区切り）。空なら公式アカウントの友だち全員 |
+| `LINE_CHANNEL_SECRET` | LINE のチャネルシークレット。「引き受ける」ボタンの受け口（`/api/line-webhook`）で使う |
+| `COORDINATOR_MODEL` | 調整係のモデル。空なら `claude-sonnet-5-5` |
+| `USER_ADDRESS` / `USER_PHONE` | 引き受けた協力者1人にだけ伝える本人の連絡先。空ならデモ用の架空の値 |
 | `ALLOWED_ORIGINS` | GitHub Pages 版の画面から呼ぶときの許可先。空なら `https://shogomatsu.github.io` |
 
 実際のご家族の名前は `lib/profile.js` に書かず、Vercel の環境変数（手元なら `.env`）に入れてください。

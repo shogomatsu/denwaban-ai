@@ -10,6 +10,8 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { getProfile } from '../lib/profile.js';
 import { buildFamilyMessage, sendFamilyLine } from '../lib/line.js';
 import { saveCall, saveHelpRequest } from '../lib/db.js';
+import { coordinate } from '../lib/coordinator.js';
+import { waitUntil } from '@vercel/functions';
 import { buildSystemPrompt, getTools, todayInJapan } from '../lib/prompt.js';
 
 // 電話がつながった合図（画面には出しません）。これを受けて AI があいさつします。
@@ -189,6 +191,8 @@ async function runTool(block, { notifications, lineResults, helpRequests, profil
     }
     const id = await saveHelpRequest(req);
     helpRequests.push({ ...req, id, saved: Boolean(id) });
+    // 調整係（Sonnet）に、協力者探しを頼む。通話は待たせずに、裏で進める
+    if (id) waitUntil(coordinate(id).catch((e) => console.error('[coordinator] 失敗', e)));
     // ログには名前や中身を残さない（機微な情報のため）
     console.log('[request_help]', req.category, id ? 'saved' : 'not_saved');
     return { type: 'tool_result', tool_use_id: block.id,
