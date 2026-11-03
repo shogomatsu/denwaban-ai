@@ -247,6 +247,7 @@
   // ---- 通話の状態 ----
   let history = [];      // Claude との会話（サーバーから返ってきたものをそのまま持つ）
   let callDate = '';     // 通話の日付（通話の途中で変えない）
+  let callId = '';       // 通話のID（サーバーが発行）
   let callStarted = false;
   let callEnded = false;
   let busy = false;
@@ -359,7 +360,7 @@
       res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Passcode': encodeURIComponent(passcode) },
-        body: JSON.stringify({ messages: history, text: userText || '', callDate }),
+        body: JSON.stringify({ messages: history, text: userText || '', callDate, callId }),
       });
     } catch (e) {
       throw new Error('サーバーにつながりませんでした。電波の良いところで、もう一度お試しください');
@@ -375,6 +376,7 @@
 
     history = data.messages || history;
     callDate = data.callDate || callDate;
+    callId = data.callId || callId;
     return data;
   }
 
@@ -387,6 +389,7 @@
   function resetCall() {
     history = [];
     callDate = '';
+    callId = '';
     callStarted = false;
     callEnded = false;
   }
@@ -419,6 +422,10 @@
     (data.notifications || []).forEach(n => {
       const head = n.level === 'urgent' ? '【至急】ご家族に知らせます：' : 'お電話のあと、ご家族に知らせます：';
       addMessage('note', head + '「' + n.quote + '」 ' + n.summary, n.level === 'urgent' ? 'urgent' : '');
+    });
+    (data.helpRequests || []).forEach(h => {
+      const parts = [h.category, h.when, h.where].filter(Boolean).join('・');
+      addMessage('note', '困りごとを受け付けました（協力者を探します）：' + parts + '「' + h.detail + '」　ご本人の言葉：「' + h.consentQuote + '」');
     });
     (data.lineResults || []).forEach(r => {
       const head = r.sent
