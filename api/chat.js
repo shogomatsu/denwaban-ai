@@ -39,7 +39,7 @@ export default async function handler(req, res) {
   }
 
   // ---- 合言葉の確認 ----
-  if (!sameText(req.headers['x-passcode'] || '', passcode)) {
+  if (!sameText(normalizePasscode(decodeHeader(req.headers['x-passcode'])), normalizePasscode(passcode))) {
     return send(res, 401, { error: '合言葉がちがいます' });
   }
 
@@ -201,6 +201,20 @@ function readBody(req) {
   if (!body || typeof body !== 'object') throw new Error('送られてきた内容が空です');
   if (JSON.stringify(body).length > MAX_BODY_BYTES) throw new Error('送られてきた内容が大きすぎます');
   return body;
+}
+
+// 画面からは、日本語も送れるように「%E3%81%86…」の形に変えて送ってくる
+function decodeHeader(value) {
+  try {
+    return decodeURIComponent(String(value || ''));
+  } catch {
+    return '';
+  }
+}
+
+// 全角・半角のちがいや、前後の空白は気にしない（「ＡＢＣ」と「ABC」を同じにする）
+function normalizePasscode(text) {
+  return String(text).normalize('NFKC').trim();
 }
 
 // 合言葉を、かかる時間から推測されにくい方法で比べる
