@@ -28,15 +28,17 @@
 .
 ├── CLAUDE.md
 ├── README.md
-├── package.json        # 依存は @anthropic-ai/sdk のみ
+├── package.json        # 依存は @anthropic-ai/sdk と @supabase/supabase-js
 ├── vercel.json         # Vercel：docs/ を静的公開、api/ を関数として公開
 ├── .env.example        # 環境変数の見本（.env はコミットしない）
 ├── dev-server.js       # ローカル確認用（npm run dev → http://localhost:3000）
+├── supabase/schema.sql # データベースの表（SQL Editor に貼って実行）
 ├── api/
 │   └── chat.js         # Claude API を呼ぶ窓口。合言葉（ACCESS_PASSCODE）で保護
 ├── lib/
 │   ├── prompt.js       # conversation-design.md からシステムプロンプトとツール定義を読む
 │   ├── line.js         # ご家族への LINE 通知
+│   ├── db.js           # Supabase への保存
 │   └── profile.js      # 人物設定（架空のデモ値。実値は環境変数で上書き）
 └── docs/               # 画面（Vercel と GitHub Pages で公開）
     ├── index.html      # 音声会話のデモ（1ファイル完結）
@@ -51,6 +53,11 @@
   - `CLAUDE_` で始まる名前は Claude Code 自身が使うことがあるので避ける。
 - `notify_family` → `lib/line.js` で LINE Messaging API に送る。urgent はその場で、concern は `end_call` のときに1通にまとめて送る。
   - `LINE_CHANNEL_ACCESS_TOKEN` が空なら送らず画面表示だけ。`LINE_TO_USER_IDS` が空なら友だち全員（broadcast）、あればその人だけ（multicast）。
+- `request_help` → 本人が同意したときだけ呼ばれる。`consent_quote`（同意の言葉）が空なら受け付けない。`lib/db.js` で Supabase の `help_requests` に保存。
+- `end_call` → `calls` に通話の記録を保存。表の定義は `supabase/schema.sql`（全表 RLS オン・許可ルールなし＝サーバーの秘密キーだけが読み書きできる）。
+  - `SUPABASE_URL` / `SUPABASE_SECRET_KEY` が空なら保存せず、会話はそのまま続ける。
+  - ログに名前・体調の言葉・困りごとの中身を出さない。
+- 1回の通話は `callId`（サーバーが発行、ブラウザが送り返す）でまとめる。
 - Twilio の着信窓口は `api/` にファイルを追加して同じ Vercel プロジェクトで動かす予定。
 
 ## 開発方針

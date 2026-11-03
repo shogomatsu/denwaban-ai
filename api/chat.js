@@ -6,9 +6,10 @@
 // - サーバーは会話を保存しません。会話はブラウザが持ち、毎回まとめて送ってきます。
 
 import Anthropic from '@anthropic-ai/sdk';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { getProfile } from '../lib/profile.js';
 import { buildFamilyMessage, sendFamilyLine } from '../lib/line.js';
+import { saveCall, saveHelpRequest } from '../lib/db.js';
 import { buildSystemPrompt, getTools, todayInJapan } from '../lib/prompt.js';
 
 // 電話がつながった合図（画面には出しません）。これを受けて AI があいさつします。
@@ -66,6 +67,8 @@ export default async function handler(req, res) {
   // 通話の日付は、通話の最初に決めたものを使い続ける
   // （途中でシステムプロンプトが変わると、AI の考えた内容が引き継げなくなるため）
   const callDate = typeof body.callDate === 'string' && body.callDate ? body.callDate.slice(0, 30) : todayInJapan();
+  // 1回の通話を表すID（通話の記録と困りごとを結びつける）
+  const callId = typeof body.callId === 'string' && /^[0-9a-f-]{36}$/.test(body.callId) ? body.callId : randomUUID();
 
   const messages = [...history];
   if (messages.length === 0) messages.push({ role: 'user', content: CALL_START_TEXT });
@@ -83,6 +86,7 @@ export default async function handler(req, res) {
   const replyParts = [];
   const notifications = [];
   const lineResults = []; // LINE に送った（送ろうとした）お知らせ
+  const helpRequests = []; // この返事の中で受け付けた困りごと
   let ended = false;
   let endReport = null;
   let refused = false;
@@ -117,7 +121,7 @@ export default async function handler(req, res) {
       const toolResults = [];
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
-        const ctx = { notifications, lineResults, profile, messages, onEnd: (report) => { ended = true; endReport = report; } };
+        const ctx = { notifications, lineResults, helpRequests, profile, messages, callId, callDate, onEnd: (report) => { ended = true; endReport = report; } };
         toolResults.push(await runTool(block, ctx));
       }
       messages.push({ role: 'user', content: toolResults });
@@ -135,7 +139,9 @@ export default async function handler(req, res) {
     reply,
     messages,
     callDate,
+    callId,
     notifications,
+    helpRequests,
     lineResults,
     ended,
     endReport,
@@ -149,7 +155,7 @@ export default async function handler(req, res) {
 // 通知のタイミング（会話設計「4. 家族へのLINE通知」のとおり）
 // - urgent（緊急）：その場ですぐに LINE を送る
 // - concern（体調が悪いと言った）：お電話のあと（end_call のとき）に、まとめて1通送る
-async function runTool(block, { notifications, lineResults, profile, messages, onEnd }) {
+async function runTool(block, { notifications, lineResults, helpRequests, profile, messages, callId, callDate, onEnd }) {
   const input = block.input || {};
   if (block.name === 'notify_family') {
     const note = {
@@ -158,21 +164,46 @@ async function runTool(block, { notifications, lineResults, profile, messages, o
       summary: String(input.summary || ''),
     };
     notifications.push(note);
-    console.log('[notify_family]', JSON.stringify(note));
+    console.log('[notify_family]', note.level);
     if (note.level === 'urgent') {
       const text = buildFamilyMessage(note, profile);
       lineResults.push({ level: 'urgent', text, ...(await sendFamilyLine(text)) });
     }
     return { type: 'tool_result', tool_use_id: block.id, content: 'ご家族への通知を受け付けました。' };
   }
+  if (block.name === 'request_help') {
+    const req = {
+      callId,
+      userName: profile.userName,
+      area: profile.area,
+      category: String(input.category || 'その他'),
+      detail: String(input.detail || ''),
+      when: String(input.when || ''),
+      where: String(input.where || ''),
+      consentQuote: String(input.consent_quote || ''),
+    };
+    if (!req.consentQuote.trim() || !req.detail.trim()) {
+      // 同意の言葉がない依頼は受け付けない（安全のための二重チェック）
+      return { type: 'tool_result', tool_use_id: block.id, is_error: true,
+        content: 'ご本人が頼むと言った言葉（consent_quote）がないため、受け付けませんでした。ご本人に「探してみましょうか？」と聞いてください。' };
+    }
+    const id = await saveHelpRequest(req);
+    helpRequests.push({ ...req, id, saved: Boolean(id) });
+    // ログには名前や中身を残さない（機微な情報のため）
+    console.log('[request_help]', req.category, id ? 'saved' : 'not_saved');
+    return { type: 'tool_result', tool_use_id: block.id,
+      content: '依頼を受け付けました。これから協力者を探します。ご本人には「探してみますね。決まったらお知らせしますね。」とだけ伝え、誰が来るかや、必ず見つかるかは約束しないでください。' };
+  }
   if (block.name === 'end_call') {
-    onEnd({
+    const report = {
       health: input.health || 'unknown',
       todayPlan: input.today_plan || '',
       needs: Array.isArray(input.needs) ? input.needs : [],
       summary: input.summary || '',
-    });
-    console.log('[end_call]', JSON.stringify(input));
+    };
+    onEnd(report);
+    console.log('[end_call]', report.health);
+    await saveCall({ callId, callDate, userName: profile.userName, ...report });
 
     // この通話で出た「体調が悪い」の言葉を集めて、1通にまとめて送る
     const quotes = collectConcernQuotes(messages);
