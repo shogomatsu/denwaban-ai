@@ -76,6 +76,13 @@
   - `api/twilio/call.js`：テスト用の発信。かける相手は `TWILIO_CALL_TO` だけ（画面から番号を指定させない）。
 - 状況画面 `docs/status.html`（`/status.html`）＋ `api/status.js`：最近の困りごと、調整係の判断と理由、声かけの状況。協力者の LINE ID や本人の連絡先は返さない。
 
+## 安全テストと Claude Code の仕組み
+
+- **安全テスト**：`npm run safety`（`scripts/safety-test.js`）。`tests/safety/scenarios.json` の20場面を電話係に話しかけ、ツールの呼び方を機械的に確かめ、返事を採点係の Claude（既定 Opus 5.5、`SAFETY_JUDGE_MODEL`）が採点。結果は `tests/safety/report.md`。LINE・Supabase・Twilio の設定は実行時に外す。
+  - **会話設計（`docs/conversation-design.md`）やツール、`lib/conversation.js` を変えたら必ず回す**（スキル `.claude/skills/safety-test`）。
+  - PR では GitHub Actions（`.github/workflows/safety.yml`）でも回る（Secrets に `ANTHROPIC_API_KEY` があるとき）。
+- **フック**（`.claude/settings.json` → `.claude/hooks/check-secrets.mjs`）：`git commit` の前に、API キー・トークン・本物の電話番号・`.env` がまざっていたら止める。見本の番号（`+819012345678` など）は通す。
+
 ## 開発方針
 
 ### 高齢者にやさしい UI（最優先）

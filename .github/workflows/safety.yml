@@ -1,0 +1,39 @@
+# 会話設計や会話の仕組みを変えた PR で、安全テスト（tests/safety の20場面）を自動で回す
+# リポジトリの Settings → Secrets and variables → Actions に ANTHROPIC_API_KEY を入れると動く（入っていなければ飛ばす）
+name: 安全テスト
+
+on:
+  pull_request:
+    paths:
+      - docs/conversation-design.md
+      - lib/**
+      - tests/safety/**
+      - scripts/safety-test.js
+  workflow_dispatch:
+
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: 安全テストを回す
+        if: env.HAS_KEY == 'true'
+        run: npm run safety
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: キーがないので飛ばす
+        if: env.HAS_KEY != 'true'
+        run: echo "ANTHROPIC_API_KEY が Secrets にないため、安全テストを飛ばしました" >> "$GITHUB_STEP_SUMMARY"
+      - name: 結果を保存
+        if: always() && env.HAS_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-report
+          path: tests/safety/report.md

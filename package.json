@@ -4,7 +4,8 @@
   "type": "module",
   "description": "電話番AI（ハッカソン試作）",
   "scripts": {
-    "dev": "node dev-server.js"
+    "dev": "node dev-server.js",
+    "safety": "node scripts/safety-test.js"
   },
   "engines": {
     "node": ">=20.12"
