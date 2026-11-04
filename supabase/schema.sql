@@ -70,3 +70,20 @@ select * from (values
   ('田中さん', array['通院の送り迎え','家の中の力仕事'],     '国見町', '火・木の午前', true)
 ) as v(display_name, can_do, area, available, has_car)
 where not exists (select 1 from helpers);
+
+-- ---- v2.1 で追加（すでに上を実行した人は、ここから下だけを実行すればよい） ----
+-- 調整係が、協力者ごとに「合う・合わない」と理由を残す
+alter table help_requests add column if not exists assessments jsonb;
+
+-- ---- 電話（Twilio）で追加（ここから下だけを実行すればよい） ----
+-- 通話中の会話。電話はブラウザとちがって履歴を持てないので、通話ごとにここに置く
+create table if not exists call_sessions (
+  call_sid    text primary key,               -- Twilio の通話ID
+  call_id     text not null,                  -- 電話番AIの通話ID（calls・help_requests と同じ）
+  call_date   text not null,
+  purpose     text not null default 'morning',-- morning（毎朝の電話） / callback（折り返し）
+  messages    jsonb not null default '[]',
+  silent      integer not null default 0,     -- 続けて無言だった回数
+  updated_at  timestamptz not null default now()
+);
+alter table call_sessions enable row level security;

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1d5c3a">
+  <title>電話番AI 困りごとの状況</title>
+  <style>
+    :root {
+      --bg: #fdfaf3;
+      --text: #1f1f1f;
+      --muted: #555;
+      --primary: #1d5c3a;
+      --card: #ffffff;
+      --border: #d8d2c4;
+      --ok-bg: #e8f3ec;
+      --no-bg: #f4f1ea;
+      --wait: #8a5a00;
+      --wait-bg: #fff4dc;
+      --alert: #b03a2e;
+      --alert-bg: #fdecea;
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 20px; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Meiryo", sans-serif; line-height: 1.6; }
+    main { max-width: 760px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right, 0px)) 32px max(16px, env(safe-area-inset-left, 0px)); }
+    h1 { font-size: 1.4rem; color: var(--primary); margin: 8px 0 2px; }
+    .lead { color: var(--muted); margin: 0 0 16px; font-size: 0.9rem; }
+    .call-btn { display: block; width: 100%; min-height: 64px; border: none; border-radius: 14px; background: var(--primary); color: #fff; font: inherit; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
+    .call-btn:disabled { background: #888; cursor: not-allowed; }
+    .call-btn:focus-visible { outline: 4px solid #f1c40f; outline-offset: 3px; }
+    #callStatus { min-height: 1.6em; font-size: 0.9rem; color: var(--muted); margin: 0 0 16px; }
+    .card { background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; display: grid; gap: 12px; }
+    .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .what { font-size: 1.15rem; font-weight: bold; flex: 1 1 260px; min-width: 0; }
+    .pill { border-radius: 999px; padding: 4px 14px; font-weight: bold; font-size: 0.9rem; white-space: nowrap; }
+    .pill.searching { background: var(--wait-bg); color: var(--wait); }
+    .pill.matched { background: var(--ok-bg); color: var(--primary); }
+    .pill.not_found { background: var(--alert-bg); color: var(--alert); }
+    .detail { margin: 0; }
+    .consent { margin: 0; font-size: 0.9rem; color: var(--muted); }
+    .section-title { font-size: 0.85rem; font-weight: bold; color: var(--muted); margin: 0 0 6px; letter-spacing: 0.04em; }
+    .judge { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+    .judge li { display: grid; grid-template-columns: 2.2em 6em 1fr; align-items: baseline; gap: 8px; padding: 8px 12px; border-radius: 10px; background: var(--no-bg); }
+    .judge li.fit { background: var(--ok-bg); }
+    .judge .mark { font-weight: bold; font-size: 1.1rem; text-align: center; }
+    .judge li.fit .mark { color: var(--primary); }
+    .judge .name { font-weight: bold; }
+    .judge .reason { min-width: 0; }
+    .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.95rem; }
+    .steps li::before { content: "・"; color: var(--muted); }
+    .message { margin: 6px 0 0; padding: 10px 12px; border-left: 4px solid var(--primary); background: var(--no-bg); border-radius: 0 10px 10px 0; font-size: 0.9rem; }
+    .empty, .error { background: var(--card); border: 2px dashed var(--border); border-radius: 16px; padding: 20px; text-align: center; color: var(--muted); }
+    .error { border-color: var(--alert); color: var(--alert); }
+    .pass-box { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
+    .pass-box[hidden] { display: none; }
+    .pass-box h2 { margin: 0; text-align: center; color: var(--primary); }
+    .pass-box form { display: flex; gap: 8px; }
+    .pass-box input { flex: 1; min-width: 0; min-height: 60px; font-size: 1.1rem; padding: 8px 12px; border: 2px solid var(--muted); border-radius: 12px; background: #fff; color: var(--text); }
+    .pass-box button { min-width: 96px; min-height: 60px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 12px; background: var(--primary); color: #fff; }
+    .pass-box label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    @media (max-width: 420px) { .judge li { grid-template-columns: 2em 1fr; } .judge .reason { grid-column: 2; } }
+  </style>
+</head>
+<body>
+<div id="passBox" class="pass-box" hidden>
+  <h2>合言葉を入れてください</h2>
+  <form id="passForm">
+    <label for="passInput">合言葉</label>
+    <input id="passInput" type="password" autocomplete="current-password" placeholder="合言葉">
+    <button type="submit">決定</button>
+  </form>
+</div>
+
+<main>
+  <h1>困りごとの状況</h1>
+  <p class="lead">電話で受け付けた困りごとと、AI（調整係）がだれに声をかけたかを表示します。3秒ごとに新しくなります。</p>
+
+  <button id="callBtn" class="call-btn" type="button" hidden>ゆげ丸から電話をかける</button>
+  <p id="callStatus" role="status"></p>
+
+  <section id="list" aria-live="polite"></section>
+</main>
+
+<script>
+(() => {
+  const PASS_KEY = 'denwaban-passcode'; // 通話の画面と同じ合言葉を使う
+  const listEl = document.getElementById('list');
+  const passBox = document.getElementById('passBox');
+  const callBtn = document.getElementById('callBtn');
+  const callStatus = document.getElementById('callStatus');
+  let passcode = '';
+  try { passcode = localStorage.getItem(PASS_KEY) || ''; } catch (e) { /* 保存できなくても動く */ }
+
+  const STATUS = { searching: '協力者を探しています', matched: '決まりました', not_found: '見つかりませんでした' };
+  const OFFER = { asked: 'に声をかけました（お返事待ち）', accepted: 'が引き受けてくださいました', declined: 'は今回は難しいとのことでした', closed: 'には、ほかの方に決まったことを伝えました' };
+
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  function render(requests) {
+    listEl.textContent = '';
+    if (!requests.length) {
+      listEl.appendChild(el('div', 'empty', 'まだ困りごとはありません。電話で「〜に行かんばとけど…」と話すと、ここに出ます。'));
+      return;
+    }
+    for (const r of requests) {
+      const card = el('article', 'card');
+      const head = el('div', 'head');
+      head.append(el('div', 'what', [r.category, r.when, r.where].filter(Boolean).join('・')), el('span', 'pill ' + r.status, STATUS[r.status] || r.status));
+      card.append(head, el('p', 'detail', `${r.userName}（${r.area || '地区未定'}）：${r.detail}`));
+      if (r.consentQuote) card.append(el('p', 'consent', `ご本人が頼むと言った言葉：「${r.consentQuote}」`));
+
+      if (r.assessments.length) {
+        const box = el('div');
+        box.append(el('p', 'section-title', 'AI（調整係）の判断'));
+        const ul = el('ul', 'judge');
+        for (const a of r.assessments) {
+          const li = el('li', a.fit ? 'fit' : '');
+          li.append(el('span', 'mark', a.fit ? '◯' : '×'), el('span', 'name', a.name), el('span', 'reason', a.reason));
+          ul.append(li);
+        }
+        box.append(ul);
+        card.append(box);
+      } else if (r.status === 'searching') {
+        card.append(el('p', 'consent', 'AI が協力者を選んでいます…'));
+      }
+
+      if (r.offers.length) {
+        const box = el('div');
+        box.append(el('p', 'section-title', '声かけ'));
+        const ul = el('ul', 'steps');
+        r.offers.forEach((o) => ul.append(el('li', '', o.helperName + (OFFER[o.status] || ''))));
+        box.append(ul);
+        const first = r.offers[0];
+        if (first.message) box.append(el('p', 'message', '送った依頼文：' + first.message));
+        card.append(box);
+      }
+      listEl.append(card);
+    }
+  }
+
+  async function load() {
+    if (!passcode) { passBox.hidden = false; return; }
+    try {
+      const res = await fetch('/api/status', { headers: { 'X-Passcode': encodeURIComponent(passcode) }, cache: 'no-store' });
+      if (res.status === 401) {
+        passcode = '';
+        try { localStorage.removeItem(PASS_KEY); } catch (e) { /* なにもしない */ }
+        passBox.hidden = false;
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '読み込めませんでした');
+      callBtn.hidden = !data.phoneReady;
+      render(data.requests || []);
+    } catch (e) {
+      listEl.textContent = '';
+      listEl.appendChild(el('div', 'error', '状況を読み込めませんでした：' + e.message));
+    }
+  }
+
+  document.getElementById('passForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = document.getElementById('passInput').value.trim();
+    if (!v) return;
+    passcode = v;
+    try { localStorage.setItem(PASS_KEY, v); } catch (e2) { /* なにもしない */ }
+    passBox.hidden = true;
+    load();
+  });
+
+  callBtn.addEventListener('click', async () => {
+    callBtn.disabled = true;
+    callStatus.textContent = '電話をかけています…';
+    try {
+      const res = await fetch('/api/twilio/call', { method: 'POST', headers: { 'X-Passcode': encodeURIComponent(passcode) } });
+      const data = await res.json().catch(() => ({}));
+      callStatus.textContent = res.ok ? 'かけました。10秒ほどで電話が鳴ります。' : ('かけられませんでした：' + (data.error || res.status));
+    } catch (e) {
+      callStatus.textContent = 'かけられませんでした。電波の良いところでお試しください。';
+    }
+    setTimeout(() => { callBtn.disabled = false; }, 15000);
+  });
+
+  load();
+  setInterval(load, 3000);
+})();
+</script>
+</body>
+</html>
