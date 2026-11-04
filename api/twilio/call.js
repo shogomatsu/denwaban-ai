@@ -11,7 +11,11 @@ export default async function handler(req, res) {
   if (!isTwilioConfigured() || !process.env.TWILIO_CALL_TO) {
     return send(500, { error: '電話の設定（TWILIO_ACCOUNT_SID・TWILIO_AUTH_TOKEN・TWILIO_PHONE_NUMBER・TWILIO_CALL_TO）がまだです' });
   }
-  const result = await placeCall({ to: process.env.TWILIO_CALL_TO, url: `${baseUrl(req)}/api/twilio/voice` });
+  const result = await placeCall({
+    to: process.env.TWILIO_CALL_TO,
+    url: `${baseUrl(req)}/api/twilio/voice`,
+    statusUrl: `${baseUrl(req)}/api/twilio/status`, // 出なかったらご家族に知らせる
+  });
   if (!result.ok) {
     const hint = result.code === 21215 || result.code === 21408
       ? 'Twilio の「Geo permissions」で Japan が許可されていないようです'

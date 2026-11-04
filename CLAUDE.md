@@ -43,6 +43,7 @@
 │   ├── conversation.js # 会話の1往復（ブラウザと電話で共通）
 │   ├── auth.js         # 合言葉の確認
 │   ├── twilio.js       # 電話（Twilio）の道具
+│   ├── audio.js        # 音声の変換（LINE の m4a → 電話で流せる mp3）
 │   ├── prompt.js       # conversation-design.md からシステムプロンプトとツール定義を読む
 │   ├── line.js         # ご家族への LINE 通知
 │   ├── db.js           # Supabase への保存
@@ -74,7 +75,16 @@
 - 電話（Twilio）`api/twilio/voice.js`：Twilio の署名を確認。`<Say>`（声は `TWILIO_VOICE`、既定 Polly.Kazuha-Neural）→ `<Gather input="speech" language="ja-JP">` を繰り返す。通話中の履歴は Supabase の `call_sessions`。着信は登録した番号（`TWILIO_ALLOWED_NUMBERS`／`TWILIO_CALL_TO`）からだけ受ける。
   - `?purpose=callback&request=<id>` は、協力者が決まったことを伝える折り返しの電話。`api/line-webhook.js` が「引き受ける」のあとに自動で発信する。
   - `api/twilio/call.js`：テスト用の発信。かける相手は `TWILIO_CALL_TO` だけ（画面から番号を指定させない）。
+  - `api/twilio/status.js`：通話の終わりの知らせ。毎朝の電話に出なかった（no-answer / busy / failed）ら家族に LINE。折り返しの電話では知らせない。
+- 家族の声の伝言：家族（`LINE_TO_USER_IDS` の人）が公式アカウントに LINE のボイスメッセージを送ると、`api/line-webhook.js` が受け取り、`lib/audio.js`（ffmpeg-static）で m4a → mp3 に変換して Supabase Storage（非公開バケット `voice-messages`）と `voice_messages` 表に保存。次の朝の電話のあいさつのあとに `<Play>` で流す（ブラウザ版は画面で流す）。**声を AI で似せることはしない。流すのは家族が録った本物の声だけ。**
 - 状況画面 `docs/status.html`（`/status.html`）＋ `api/status.js`：最近の困りごと、調整係の判断と理由、声かけの状況。協力者の LINE ID や本人の連絡先は返さない。
+
+## 安全テストと Claude Code の仕組み
+
+- **安全テスト**：`npm run safety`（`scripts/safety-test.js`）。`tests/safety/scenarios.json` の20場面を電話係に話しかけ、ツールの呼び方を機械的に確かめ、返事を採点係の Claude（既定 Opus 5.5、`SAFETY_JUDGE_MODEL`）が採点。結果は `tests/safety/report.md`。LINE・Supabase・Twilio の設定は実行時に外す。
+  - **会話設計（`docs/conversation-design.md`）やツール、`lib/conversation.js` を変えたら必ず回す**（スキル `.claude/skills/safety-test`）。
+  - PR では GitHub Actions（`.github/workflows/safety.yml`）でも回る（Secrets に `ANTHROPIC_API_KEY` があるとき）。
+- **フック**（`.claude/settings.json` → `.claude/hooks/check-secrets.mjs`）：`git commit` の前に、API キー・トークン・本物の電話番号・`.env` がまざっていたら止める。見本の番号（`+819012345678` など）は通す。
 
 ## 開発方針
 

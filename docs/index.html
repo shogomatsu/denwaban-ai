@@ -452,6 +452,11 @@
       setStatus('お返事しています…');
       await speak(data.reply);
     }
+    if (data.voiceMessage && data.voiceMessage.url) {
+      addMessage('note', data.voiceMessage.fromName + 'からの伝言（本物の声）を流しています');
+      setStatus('ご家族からの伝言を流しています…');
+      await playAudio(data.voiceMessage.url);
+    }
     setBusy(false);
 
     if (data.ended) {
@@ -480,6 +485,16 @@
     } catch (e) {
       setStatus(auto ? 'お話しするときは、ボタンを押してください' : 'もう一度ボタンを押してください');
     }
+  }
+
+  // ご家族の伝言の音声を流す（流し終わるまで待つ）
+  function playAudio(url) {
+    return new Promise((resolve) => {
+      const audio = new Audio(url);
+      audio.onended = resolve;
+      audio.onerror = resolve;
+      audio.play().catch(resolve);
+    });
   }
 
   // ---- 文字で話す ----

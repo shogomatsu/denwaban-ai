@@ -8,7 +8,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 import { checkPasscode } from '../lib/auth.js';
-import { runTurn } from '../lib/conversation.js';
+import { runTurn, voiceMessagePlayedNote, voiceMessageStartText } from '../lib/conversation.js';
+import { markVoicePlayed, nextVoiceMessage } from '../lib/db.js';
 import { todayInJapan } from '../lib/prompt.js';
 
 // 悪用・使いすぎ防止の上限
@@ -63,7 +64,15 @@ export default async function handler(req, res) {
   const callId = typeof body.callId === 'string' && /^[0-9a-f-]{36}$/.test(body.callId) ? body.callId : randomUUID();
 
   try {
-    const result = await runTurn({ history, text, callDate, callId });
+    // 通話の始まりで、ご家族の声の伝言が届いていれば、あいさつのあとに画面で流す
+    const voice = history.length === 0 && !text ? await nextVoiceMessage() : null;
+    const startText = voice ? voiceMessageStartText(voice.fromName) : undefined;
+    const result = await runTurn({ history, text, callDate, callId, startText });
+    if (voice && !result.ended) {
+      result.messages.push(voiceMessagePlayedNote(voice.fromName));
+      result.voiceMessage = { url: voice.url, fromName: voice.fromName };
+      await markVoicePlayed(voice.id);
+    }
     return send(res, 200, result);
   } catch (error) {
     return sendApiError(res, error);

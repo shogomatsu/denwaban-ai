@@ -87,3 +87,15 @@ create table if not exists call_sessions (
   updated_at  timestamptz not null default now()
 );
 alter table call_sessions enable row level security;
+
+-- ---- 家族の声の伝言で追加（ここから下だけを実行すればよい） ----
+-- ご家族が LINE で送ったボイスメッセージ（本物の声）。次の朝の電話で流す
+-- 音声そのものは Storage の voice-messages（非公開）に置く。バケットはサーバーが最初に自動で作る
+create table if not exists voice_messages (
+  id            uuid primary key default gen_random_uuid(),
+  from_name     text not null,                -- 例：娘のミキさん
+  storage_path  text not null,
+  played_at     timestamptz,                  -- 電話で流した日時（まだなら空）
+  created_at    timestamptz not null default now()
+);
+alter table voice_messages enable row level security;

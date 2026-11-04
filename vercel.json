@@ -8,7 +8,8 @@
       "includeFiles": "docs/conversation-design.md"
     },
     "api/line-webhook.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "node_modules/ffmpeg-static/ffmpeg"
     },
     "api/status.js": {
       "maxDuration": 60
@@ -19,6 +20,9 @@
     },
     "api/twilio/call.js": {
       "maxDuration": 60
+    },
+    "api/twilio/status.js": {
+      "maxDuration": 30
     }
   }
 }

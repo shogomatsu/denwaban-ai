@@ -91,6 +91,16 @@ npm run dev
 
 ブラウザで http://localhost:3000 を開きます。
 
+## 安全テスト
+
+会話設計を変えたら、電話係が決まり（医療の助言をしない、同意なしに依頼しない、AIと名乗る、119番をすすめる など）を守れているかを、20の場面で確かめます。
+
+```bash
+npm run safety
+```
+
+`.env` の `ANTHROPIC_API_KEY` を使います。LINE・データベース・電話にはつなぎません。結果は `tests/safety/report.md` に出ます（20場面で1ドル未満）。
+
 ## ディレクトリ構成
 
 ```
@@ -102,6 +112,8 @@ docs/index.html             音声会話デモの画面
 docs/status.html            困りごとの状況画面（/status.html）
 docs/conversation-design.md 毎朝の電話の会話設計（システムプロンプト）
 dev-server.js               手元で試すためのサーバー
+scripts/safety-test.js      安全テスト（tests/safety/scenarios.json の20場面）
+.claude/                    Claude Code のスキル（安全テスト）とフック（秘密情報のコミット防止）
 vercel.json                 Vercel の設定
 .env.example                環境変数の見本（.env はコミットしない）
 CLAUDE.md                   プロジェクト概要と開発方針
