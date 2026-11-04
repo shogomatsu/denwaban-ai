@@ -75,6 +75,7 @@
 - 電話（Twilio）`api/twilio/voice.js`：Twilio の署名を確認。`<Say>`（声は `TWILIO_VOICE`、既定 Polly.Kazuha-Neural）→ `<Gather input="speech" language="ja-JP">` を繰り返す。通話中の履歴は Supabase の `call_sessions`。着信は登録した番号（`TWILIO_ALLOWED_NUMBERS`／`TWILIO_CALL_TO`）からだけ受ける。
   - `?purpose=callback&request=<id>` は、協力者が決まったことを伝える折り返しの電話。`api/line-webhook.js` が「引き受ける」のあとに自動で発信する。
   - `api/twilio/call.js`：テスト用の発信。かける相手は `TWILIO_CALL_TO` だけ（画面から番号を指定させない）。
+  - `api/twilio/status.js`：通話の終わりの知らせ。毎朝の電話に出なかった（no-answer / busy / failed）ら家族に LINE。折り返しの電話では知らせない。
 - 家族の声の伝言：家族（`LINE_TO_USER_IDS` の人）が公式アカウントに LINE のボイスメッセージを送ると、`api/line-webhook.js` が受け取り、`lib/audio.js`（ffmpeg-static）で m4a → mp3 に変換して Supabase Storage（非公開バケット `voice-messages`）と `voice_messages` 表に保存。次の朝の電話のあいさつのあとに `<Play>` で流す（ブラウザ版は画面で流す）。**声を AI で似せることはしない。流すのは家族が録った本物の声だけ。**
 - 状況画面 `docs/status.html`（`/status.html`）＋ `api/status.js`：最近の困りごと、調整係の判断と理由、声かけの状況。協力者の LINE ID や本人の連絡先は返さない。
 

@@ -20,6 +20,9 @@
     },
     "api/twilio/call.js": {
       "maxDuration": 60
+    },
+    "api/twilio/status.js": {
+      "maxDuration": 30
     }
   }
 }
