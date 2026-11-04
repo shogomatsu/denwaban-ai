@@ -158,13 +158,19 @@
     }
     .text-form button:disabled { background: #888; cursor: not-allowed; }
     .pass-box {
-      background: var(--card);
-      border: 2px solid var(--primary);
-      border-radius: 12px;
-      padding: 12px 16px;
-      margin-bottom: 12px;
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+      padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
     }
-    .pass-box p { margin: 0 0 8px; }
+    .pass-box[hidden] { display: none; }
+    .pass-box h2 { margin: 0; font-size: 1.4rem; color: var(--primary); text-align: center; }
+    .pass-box p { margin: 0; text-align: center; }
     .sub-label {
       text-align: center;
       font-size: 0.85rem;
@@ -190,7 +196,8 @@
   </div>
 
   <div id="passBox" class="pass-box" hidden>
-    <p>はじめに、合言葉を入れてください。</p>
+    <h2>合言葉を入れてください</h2>
+    <p>はじめの1回だけです。次からは入れなくて大丈夫です。</p>
     <form id="passForm" class="pass-form">
       <label for="passInput">合言葉</label>
       <input id="passInput" type="password" autocomplete="current-password" placeholder="合言葉">
@@ -251,6 +258,7 @@
   let callStarted = false;
   let callEnded = false;
   let busy = false;
+  let voiceMode = false; // 声で話しているとき true（AIが話し終わったら自動で聞き取りを始める）
 
   // ---- 合言葉（この端末のブラウザにだけ保存）----
   const PASS_KEY = 'denwaban-passcode';
@@ -448,13 +456,30 @@
 
     if (data.ended) {
       callEnded = true;
+      voiceMode = false;
       setStatus('お電話が終わりました。もう一度かけるときは、ボタンを押してください');
+    } else if (voiceMode && SpeechRecognition) {
+      // 本物の電話と同じように、話し終わったらそのまま聞く
+      startListening(true);
     } else {
       setStatus(SpeechRecognition
         ? 'もう一度話すときは、ボタンを押してください'
         : '文字を入れて「送る」を押してください');
     }
     return true;
+  }
+
+  // auto = true のときは自動で始めた聞き取り（iPhone では止められることがある）
+  function startListening(auto) {
+    if (!SpeechRecognition) return;
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    recognition = setupRecognition();
+    recognition.autoStarted = auto;
+    try {
+      recognition.start();
+    } catch (e) {
+      setStatus(auto ? 'お話しするときは、ボタンを押してください' : 'もう一度ボタンを押してください');
+    }
   }
 
   // ---- 文字で話す ----
@@ -466,6 +491,7 @@
     if (window.speechSynthesis) speechSynthesis.cancel();
     if (listening && recognition) recognition.abort();
     if (callEnded) { resetCall(); logEl.textContent = ''; }
+    voiceMode = false; // 文字で話すときは、自動でマイクを開かない
     textInput.value = '';
     const myMsg = addMessage('me', text);
     const ok = await respond(text);
@@ -518,6 +544,15 @@
         'network': '通信がうまくいきませんでした。電波の良いところでお試しください',
         'aborted': '聞き取りを止めました'
       };
+      // 自動で始めた聞き取りを iPhone などが止めたときは、ボタンを押してもらう
+      if (r.autoStarted && (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'aborted')) {
+        setStatus('お話しするときは、ボタンを押してください');
+        return;
+      }
+      if (r.autoStarted && event.error === 'no-speech') {
+        setStatus('声が聞こえませんでした。お話しするときは、ボタンを押してください');
+        return;
+      }
       setStatus(messages[event.error] || ('うまく聞き取れませんでした（' + event.error + '）'));
     };
 
@@ -550,6 +585,7 @@
     unlockTTS();
     if (listening) { recognition && recognition.stop(); return; }
     if (busy) return;
+    voiceMode = true;
 
     if (!callStarted || callEnded) {
       // 最初の1回は電話番AIからのあいさつ（毎朝の電話のイメージ）
@@ -560,20 +596,11 @@
         addMessage('ai', GREETING);
         await speak(GREETING);
       }
-      if (ok && !callEnded) {
-        // iPhone では音声認識の開始にボタン操作が必要なため、ここで一度止めてもう一度押してもらう
-        setStatus('ボタンを押して、お返事してください');
-      }
+      // あいさつのあとは、respond() が自動で聞き取りを始める（iPhone で止められたらボタンを押してもらう）
       return;
     }
 
-    speechSynthesis.cancel();
-    recognition = setupRecognition();
-    try {
-      recognition.start();
-    } catch (e) {
-      setStatus('もう一度ボタンを押してください');
-    }
+    startListening(false);
   });
 })();
 </script>
