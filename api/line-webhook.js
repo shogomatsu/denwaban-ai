@@ -13,9 +13,10 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { waitUntil } from '@vercel/functions';
 import { coordinate } from '../lib/coordinator.js';
 import {
-  addThanksPoint, getHelpRequest, getHelper, getOffer, setHelpRequestStatusIfSearching, setOfferStatus,
+  addThanksPoint, getHelpRequest, getHelper, getOffer, saveVoiceMessage, setHelpRequestStatusIfSearching, setOfferStatus,
 } from '../lib/db.js';
-import { replyTo, sendFamilyLine, text } from '../lib/line.js';
+import { getMessageContent, isFamilyUser, pushTo, replyTo, sendFamilyLine, text } from '../lib/line.js';
+import { toMp3 } from '../lib/audio.js';
 import { getProfile } from '../lib/profile.js';
 import { baseUrl, isTwilioConfigured, placeCall } from '../lib/twilio.js';
 
@@ -65,6 +66,10 @@ async function handleEvent(event) {
     // 協力者やご家族を登録するために、ユーザーIDを Vercel のログに出す（ここだけは名前ではなくIDなので出してよい）
     console.log('[line-webhook] 友だち追加 userId =', event.source?.userId);
     await replyTo(event.replyToken, [text('友だち追加ありがとうございます。電話番AIからのお知らせやお手伝いのお願いを、ここにお送りします。')]);
+    return;
+  }
+  if (event.type === 'message' && event.message?.type === 'audio') {
+    await handleVoiceMessage(event);
     return;
   }
   if (event.type !== 'postback') return;
@@ -151,4 +156,29 @@ function validSignature(raw, signature, secret) {
     return false;
   }
   return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+// ご家族からのボイスメッセージ（本物の声）を、次の朝の電話で流す伝言として預かる
+async function handleVoiceMessage(event) {
+  const userId = event.source?.userId;
+  if (!isFamilyUser(userId)) {
+    await replyTo(event.replyToken, [text('このアカウントでは、登録されたご家族からの伝言だけをお預かりしています。')]);
+    return;
+  }
+  const profile = getProfile();
+  await replyTo(event.replyToken, [text(`伝言を受け取りました。次の朝のお電話で、${profile.userName}にお届けしますね。`)]);
+  // 形式の変換と保存は、返事のあとに裏で進める
+  waitUntil((async () => {
+    try {
+      const m4a = await getMessageContent(event.message.id);
+      if (!m4a) throw new Error('音声を受け取れませんでした');
+      const mp3 = await toMp3(m4a);
+      const id = await saveVoiceMessage({ fromName: profile.familyName, mp3 });
+      if (!id) throw new Error('保存できませんでした');
+      console.log('[line-webhook] 伝言を保存しました');
+    } catch (e) {
+      console.error('[line-webhook] 伝言の保存に失敗', e.message);
+      await pushTo(userId, [text('すみません、伝言をうまく保存できませんでした。もう一度送っていただけますか。')]);
+    }
+  })());
 }

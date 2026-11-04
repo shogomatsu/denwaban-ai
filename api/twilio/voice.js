@@ -7,11 +7,13 @@
 // ?purpose=callback&request=<困りごとのID> のときは、協力者が決まったことを伝える折り返しの電話になる。
 
 import { randomUUID } from 'node:crypto';
-import { runTurn } from '../../lib/conversation.js';
-import { acceptedHelperName, getCallSession, getHelpRequest, isDbConfigured, saveCallSession } from '../../lib/db.js';
+import { runTurn, voiceMessagePlayedNote, voiceMessageStartText } from '../../lib/conversation.js';
+import {
+  acceptedHelperName, getCallSession, getHelpRequest, isDbConfigured, markVoicePlayed, nextVoiceMessage, saveCallSession,
+} from '../../lib/db.js';
 import { todayInJapan } from '../../lib/prompt.js';
 import {
-  allowedCaller, baseUrl, readForm, twimlSayAndHangup, twimlSayAndListen, validTwilioSignature,
+  allowedCaller, baseUrl, readForm, twimlSayAndHangup, twimlSayAndListen, twimlSayPlayAndListen, validTwilioSignature,
 } from '../../lib/twilio.js';
 
 const MAX_SILENT = 2; // 続けて無言だったら、やさしく切る
@@ -46,8 +48,16 @@ export default async function handler(req, res) {
     if (!session) {
       // 電話がつながった：AI からあいさつする
       session = { callSid, callId: randomUUID(), callDate: todayInJapan(), purpose, messages: [], silent: 0 };
-      const startText = purpose === 'callback' ? await callbackStartText(url.searchParams.get('request')) : undefined;
+      // 毎朝の電話で、ご家族の声の伝言が届いていれば、あいさつのあとに流す
+      const voice = purpose === 'morning' ? await nextVoiceMessage() : null;
+      const startText = purpose === 'callback' ? await callbackStartText(url.searchParams.get('request'))
+        : voice ? voiceMessageStartText(voice.fromName) : undefined;
       const result = await runTurn({ history: [], text: '', callDate: session.callDate, callId: session.callId, startText });
+      if (voice && !result.ended) {
+        await saveCallSession({ ...session, messages: [...result.messages, voiceMessagePlayedNote(voice.fromName)] });
+        await markVoicePlayed(voice.id);
+        return reply(twimlSayPlayAndListen(result.reply, voice.url, actionUrl));
+      }
       await saveCallSession({ ...session, messages: result.messages });
       return reply(result.ended ? twimlSayAndHangup(result.reply) : twimlSayAndListen(result.reply, actionUrl));
     }
