@@ -27,7 +27,11 @@ export default async function handler(req, res) {
       21205: '公開アドレス（PUBLIC_BASE_URL）の形がちがうようです',
       20003: 'Account SID か Auth Token がちがうようです',
     };
-    const hint = HINTS[result.code] || '電話をかけられませんでした。Twilio の設定を確かめてください';
+    // 同じ 20003 でも、本人確認（KYC）が終わっていないときは理由の英文でわかる
+    const kyc = /compliance|KYC|Trust Hub/i.test(String(result.message || ''));
+    const hint = kyc
+      ? 'Twilio の本人確認（Trust Hub の Primary Customer Profile）がまだ承認されていません。承認されると電話をかけられます'
+      : HINTS[result.code] || '電話をかけられませんでした。Twilio の設定を確かめてください';
     // Twilio からの英語の理由もそのまま出す（設定を直す手がかりになる）
     const detail = result.message ? ` ／ ${String(result.message).slice(0, 200)}` : '';
     return send(502, { error: `${hint}（コード ${result.code || result.status}${detail}）` });
