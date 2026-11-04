@@ -51,6 +51,11 @@
 | `LINE_CHANNEL_SECRET` | LINE のチャネルシークレット。「引き受ける」ボタンの受け口（`/api/line-webhook`）で使う |
 | `COORDINATOR_MODEL` | 調整係のモデル。空なら `claude-sonnet-5-5` |
 | `USER_ADDRESS` / `USER_PHONE` | 引き受けた協力者1人にだけ伝える本人の連絡先。空ならデモ用の架空の値 |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_PHONE_NUMBER` | 電話（Twilio）。空なら電話は使わない |
+| `TWILIO_CALL_TO` | ゆげ丸が電話をかける相手（本人の電話、+81 の形） |
+| `TWILIO_ALLOWED_NUMBERS` | かかってきた電話を受けてよい番号。空なら `TWILIO_CALL_TO` だけ |
+| `TWILIO_VOICE` | 読み上げの声。空なら `Polly.Kazuha-Neural` |
+| `PUBLIC_BASE_URL` | 公開アドレス（例：`https://denwaban-ai.vercel.app`）。Twilio の署名の確認に使う |
 | `ALLOWED_ORIGINS` | GitHub Pages 版の画面から呼ぶときの許可先。空なら `https://shogomatsu.github.io` |
 
 実際のご家族の名前は `lib/profile.js` に書かず、Vercel の環境変数（手元なら `.env`）に入れてください。
@@ -94,6 +99,7 @@ lib/prompt.js               会話設計からシステムプロンプトとツ�
 lib/profile.js              人物の設定（架空のデモ用の値）
 lib/line.js                 ご家族への LINE 通知
 docs/index.html             音声会話デモの画面
+docs/status.html            困りごとの状況画面（/status.html）
 docs/conversation-design.md 毎朝の電話の会話設計（システムプロンプト）
 dev-server.js               手元で試すためのサーバー
 vercel.json                 Vercel の設定

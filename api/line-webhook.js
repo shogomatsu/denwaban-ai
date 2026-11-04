@@ -17,6 +17,9 @@ import {
 } from '../lib/db.js';
 import { replyTo, sendFamilyLine, text } from '../lib/line.js';
 import { getProfile } from '../lib/profile.js';
+import { baseUrl, isTwilioConfigured, placeCall } from '../lib/twilio.js';
+
+let currentReq = null; // 折り返しの電話の窓口の場所（このサーバーのアドレス）を知るため
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -45,6 +48,7 @@ export default async function handler(req, res) {
     return res.end();
   }
 
+  currentReq = req;
   for (const event of events) {
     try {
       await handleEvent(event);
@@ -118,6 +122,12 @@ async function handleEvent(event) {
   // ご家族に報告
   await sendFamilyLine(`【電話番AI】${profile.userName}の「${request.category}（${request.when_text || '日時はご本人と相談'}）」を、ご近所の協力者の${helper.display_name}が引き受けてくださいました。`);
   console.log('[line-webhook] matched');
+
+  // ゆげ丸から本人に、折り返しの電話で伝える（電話の設定があるときだけ。ないときは翌朝の電話で伝える）
+  if (isTwilioConfigured() && process.env.TWILIO_CALL_TO) {
+    const url = `${baseUrl(currentReq)}/api/twilio/voice?purpose=callback&request=${encodeURIComponent(request.id)}`;
+    waitUntil(placeCall({ to: process.env.TWILIO_CALL_TO, url }).catch((e) => console.error('[line-webhook] 折り返しの電話に失敗', e)));
+  }
 }
 
 // 署名の確認には「届いたままの文字」が要る。req.body に触ると Vercel が先に読んでしまうので、

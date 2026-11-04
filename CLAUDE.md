@@ -34,9 +34,15 @@
 ├── dev-server.js       # ローカル確認用（npm run dev → http://localhost:3000）
 ├── supabase/schema.sql # データベースの表（SQL Editor に貼って実行）
 ├── api/
-│   ├── chat.js         # Claude API を呼ぶ窓口。合言葉（ACCESS_PASSCODE）で保護
+│   ├── chat.js         # ブラウザの会話の窓口。合言葉（ACCESS_PASSCODE）で保護
+│   ├── status.js       # 状況画面のデータ
+│   ├── twilio/voice.js # 電話の窓口（Twilio）
+│   ├── twilio/call.js  # テスト用の発信
 │   └── line-webhook.js # LINE の受け口（「引き受ける」ボタン・友だち追加）
 ├── lib/
+│   ├── conversation.js # 会話の1往復（ブラウザと電話で共通）
+│   ├── auth.js         # 合言葉の確認
+│   ├── twilio.js       # 電話（Twilio）の道具
 │   ├── prompt.js       # conversation-design.md からシステムプロンプトとツール定義を読む
 │   ├── line.js         # ご家族への LINE 通知
 │   ├── db.js           # Supabase への保存
@@ -44,6 +50,7 @@
 │   └── profile.js      # 人物設定（架空のデモ値。実値は環境変数で上書き）
 └── docs/               # 画面（Vercel と GitHub Pages で公開）
     ├── index.html      # 音声会話のデモ（1ファイル完結）
+    ├── status.html     # 困りごとの状況画面（調整係の判断を見せる）
     ├── conversation-design.md  # 会話設計。システムプロンプトの元
     └── .nojekyll
 ```
@@ -63,7 +70,11 @@
 - 調整係 `lib/coordinator.js`（Claude Sonnet 5.5、`COORDINATOR_MODEL` で変更可）：`request_help` の保存後に `waitUntil` で裏で動く。協力者ごとに「合う・合わない」と理由（`help_requests.assessments`）を残し、1人を選んで LINE で依頼（本文＋「引き受ける／今回は難しい」ボタン）。依頼文に本人の名前・住所・電話・体調を書かせない。
   - server-side fallback（`fallbacks: "default"`）を有効にしている。
 - LINE の受け口 `api/line-webhook.js`：署名（`LINE_CHANNEL_SECRET`）を確認。声をかけた本人のボタンだけ受け付け、早い者勝ちで確定。確定した1人にだけ本人の連絡先を返信し、家族に報告、ポイント+1。「今回は難しい」なら次の人を探し、誰もいなければ家族に相談。友だち追加でユーザーIDをログに出す（登録用）。
-- Twilio の着信窓口は `api/` にファイルを追加して同じ Vercel プロジェクトで動かす予定。
+- 会話の1往復は `lib/conversation.js` の `runTurn()`。ブラウザ（`api/chat.js`）と電話（`api/twilio/voice.js`）で共通。合言葉の確認は `lib/auth.js`。
+- 電話（Twilio）`api/twilio/voice.js`：Twilio の署名を確認。`<Say>`（声は `TWILIO_VOICE`、既定 Polly.Kazuha-Neural）→ `<Gather input="speech" language="ja-JP">` を繰り返す。通話中の履歴は Supabase の `call_sessions`。着信は登録した番号（`TWILIO_ALLOWED_NUMBERS`／`TWILIO_CALL_TO`）からだけ受ける。
+  - `?purpose=callback&request=<id>` は、協力者が決まったことを伝える折り返しの電話。`api/line-webhook.js` が「引き受ける」のあとに自動で発信する。
+  - `api/twilio/call.js`：テスト用の発信。かける相手は `TWILIO_CALL_TO` だけ（画面から番号を指定させない）。
+- 状況画面 `docs/status.html`（`/status.html`）＋ `api/status.js`：最近の困りごと、調整係の判断と理由、声かけの状況。協力者の LINE ID や本人の連絡先は返さない。
 
 ## 開発方針
 
