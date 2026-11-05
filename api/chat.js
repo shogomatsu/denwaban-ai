@@ -8,7 +8,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 import { checkPasscode } from '../lib/auth.js';
-import { runTurn, voiceMessagePlayedNote, voiceMessageStartText } from '../lib/conversation.js';
+import { runTurn, voiceMessageAfterText, voiceMessagePlayedNote, voiceMessageStartText } from '../lib/conversation.js';
 import { markVoicePlayed, nextVoiceMessage } from '../lib/db.js';
 import { todayInJapan } from '../lib/prompt.js';
 
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
     const result = await runTurn({ history, text, callDate, callId, startText });
     if (voice && !result.ended) {
       result.messages.push(voiceMessagePlayedNote(voice.fromName));
-      result.voiceMessage = { url: voice.url, fromName: voice.fromName };
+      result.voiceMessage = { url: voice.url, fromName: voice.fromName, afterText: voiceMessageAfterText(voice.fromName) };
       await markVoicePlayed(voice.id);
     }
     return send(res, 200, result);

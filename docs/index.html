@@ -456,6 +456,12 @@
       addMessage('note', data.voiceMessage.fromName + 'からの伝言（本物の声）を流しています');
       setStatus('ご家族からの伝言を流しています…');
       await playAudio(data.voiceMessage.url);
+      // 伝言のあと、間をあけずに体調をたずねる（電話と同じ）
+      if (data.voiceMessage.afterText) {
+        addMessage('ai', data.voiceMessage.afterText);
+        setStatus('お返事しています…');
+        await speak(data.voiceMessage.afterText);
+      }
     }
     setBusy(false);
 
