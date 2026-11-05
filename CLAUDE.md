@@ -36,6 +36,7 @@
 ├── api/
 │   ├── chat.js         # ブラウザの会話の窓口。合言葉（ACCESS_PASSCODE）で保護
 │   ├── status.js       # 状況画面のデータ
+│   ├── mcp.js          # 家族が Claude に様子を聞く窓口（MCP・読み取り専用）
 │   ├── twilio/voice.js # 電話の窓口（Twilio）
 │   ├── twilio/call.js  # テスト用の発信
 │   └── line-webhook.js # LINE の受け口（「引き受ける」ボタン・友だち追加）
@@ -78,6 +79,9 @@
   - `api/twilio/status.js`：通話の終わりの知らせ。毎朝の電話に出なかった（no-answer / busy / failed）ら家族に LINE。折り返しの電話では知らせない。
 - 家族の声の伝言：家族（`LINE_TO_USER_IDS` の人）が公式アカウントに LINE のボイスメッセージを送ると、`api/line-webhook.js` が受け取り、`lib/audio.js`（ffmpeg-static）で m4a → mp3 に変換して Supabase Storage（非公開バケット `voice-messages`）と `voice_messages` 表に保存。次の朝の電話のあいさつのあとに `<Play>` で流す（ブラウザ版は画面で流す）。**声を AI で似せることはしない。流すのは家族が録った本物の声だけ。**
 - 状況画面 `docs/status.html`（`/status.html`）＋ `api/status.js`：最近の困りごと、調整係の判断と理由、声かけの状況。協力者の LINE ID や本人の連絡先は返さない。
+- 家族が Claude に様子を聞く `api/mcp.js`（MCP サーバー・Streamable HTTP の状態を持たない最小形）：道具は `get_recent_calls`（最近の通話のまとめ）と `get_help_requests`（困りごとの状況）の2つで、**読むだけ**。電話・LINE・書きかえの道具は置かない。
+  - 鍵 `MCP_ACCESS_KEY` が空なら閉じたまま（404）。鍵は `Authorization: Bearer` か `?key=` で受ける。鍵入りのアドレスは合言葉と同じ扱い。
+  - 協力者の LINE ID・本人の住所・電話番号は返さない。返す文には「AI は医療の判断をしない。緊急は119番」を添える。
 
 ## 安全テストと Claude Code の仕組み
 
