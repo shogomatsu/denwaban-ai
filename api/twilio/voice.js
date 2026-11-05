@@ -7,7 +7,7 @@
 // ?purpose=callback&request=<困りごとのID> のときは、協力者が決まったことを伝える折り返しの電話になる。
 
 import { randomUUID } from 'node:crypto';
-import { runTurn, voiceMessagePlayedNote, voiceMessageStartText } from '../../lib/conversation.js';
+import { runTurn, voiceMessageAfterText, voiceMessagePlayedNote, voiceMessageStartText } from '../../lib/conversation.js';
 import {
   acceptedHelperName, getCallSession, getHelpRequest, isDbConfigured, markVoicePlayed, nextVoiceMessage, saveCallSession,
 } from '../../lib/db.js';
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
       if (voice && !result.ended) {
         await saveCallSession({ ...session, messages: [...result.messages, voiceMessagePlayedNote(voice.fromName)] });
         await markVoicePlayed(voice.id);
-        return reply(twimlSayPlayAndListen(result.reply, voice.url, actionUrl));
+        return reply(twimlSayPlayAndListen(result.reply, voice.url, voiceMessageAfterText(voice.fromName), actionUrl));
       }
       await saveCallSession({ ...session, messages: result.messages });
       return reply(result.ended ? twimlSayAndHangup(result.reply) : twimlSayAndListen(result.reply, actionUrl));

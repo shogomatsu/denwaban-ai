@@ -14,7 +14,7 @@ if (existsSync('.env')) process.loadEnvFile('.env');
 
 // api/ の下のファイルを、Vercel と同じ場所（/api/〇〇）で動かす
 const apiHandlers = {};
-for (const name of ['chat', 'line-webhook', 'status', 'twilio/voice', 'twilio/call', 'twilio/status']) {
+for (const name of ['chat', 'line-webhook', 'status', 'mcp', 'twilio/voice', 'twilio/call', 'twilio/status']) {
   apiHandlers[`/api/${name}`] = (await import(`./api/${name}.js`)).default;
 }
 
