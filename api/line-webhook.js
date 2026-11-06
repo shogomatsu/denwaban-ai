@@ -72,6 +72,13 @@ async function handleEvent(event) {
     await handleVoiceMessage(event);
     return;
   }
+  if (event.type === 'message') {
+    // 友だち追加のときにIDを控え損ねた人のために、まだ登録していない人がスタンプなどを送ったら、IDだけをログに出す
+    // （メッセージの中身はログに出さない。返事もしない）
+    const userId = event.source?.userId;
+    if (userId && !isFamilyUser(userId)) console.log('[line-webhook] メッセージ userId =', userId);
+    return;
+  }
   if (event.type !== 'postback') return;
 
   const params = new URLSearchParams(event.postback?.data || '');
