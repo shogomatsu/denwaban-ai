@@ -7,7 +7,10 @@
   <title>電話番AI 困りごとの状況</title>
   <style>
     :root {
-      --bg: #fdfaf3;
+      --bg: #fff8f0;
+      --dawn1: #ffcf8a;
+      --dawn2: #ff8a5c;
+      --dawn-ink: #5a2a1a;
       --text: #1f1f1f;
       --muted: #555;
       --primary: #1d5c3a;
@@ -24,15 +27,24 @@
     html { font-size: 20px; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Meiryo", sans-serif; line-height: 1.6; }
     main { max-width: 760px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right, 0px)) 32px max(16px, env(safe-area-inset-left, 0px)); }
-    h1 { font-size: 1.4rem; color: var(--primary); margin: 8px 0 2px; }
-    .lead { color: var(--muted); margin: 0 0 16px; font-size: 0.9rem; }
-    .call-btn { display: block; width: 100%; min-height: 64px; border: none; border-radius: 14px; background: var(--primary); color: #fff; font: inherit; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
+    /* 上の帯：ゆげ丸と朝焼け */
+    .hero { display: flex; align-items: center; gap: 16px; padding: 16px 20px; margin: 4px 0 16px; border-radius: 20px; background: linear-gradient(120deg, var(--dawn1), var(--dawn2)); color: var(--dawn-ink); }
+    .hero svg { flex: none; width: 76px; height: 76px; }
+    .hero h1 { font-size: 1.45rem; margin: 0; color: var(--dawn-ink); line-height: 1.3; }
+    .hero .sub { margin: 2px 0 0; font-size: 0.85rem; font-weight: bold; opacity: 0.85; }
+    .lead { color: var(--muted); margin: 0 0 14px; font-size: 0.85rem; text-wrap: balance; word-break: auto-phrase; }
+    .lead span { display: inline-block; }
+    .call-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 64px; border: none; border-radius: 16px; background: var(--primary); color: #fff; font: inherit; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-bottom: 8px; box-shadow: 0 4px 0 #123d26; }
+    .call-btn svg { width: 26px; height: 26px; fill: #fff; }
+    .call-btn[hidden] { display: none; }
     .call-btn:disabled { background: #888; cursor: not-allowed; }
     .call-btn:focus-visible { outline: 4px solid #f1c40f; outline-offset: 3px; }
     #callStatus { min-height: 1.6em; font-size: 0.9rem; color: var(--muted); margin: 0 0 16px; }
-    .card { background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; display: grid; gap: 12px; }
+    .card { background: var(--card); border: 2px solid var(--border); border-top: 8px solid var(--dawn2); border-radius: 18px; padding: 16px; margin-bottom: 16px; display: grid; gap: 12px; }
+    .card.matched { border-top-color: var(--primary); }
+    .card.not_found { border-top-color: var(--alert); }
     .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-    .what { font-size: 1.15rem; font-weight: bold; flex: 1 1 260px; min-width: 0; }
+    .what { font-size: 1.15rem; font-weight: bold; flex: 1 1 260px; min-width: 0; word-break: auto-phrase; }
     .pill { border-radius: 999px; padding: 4px 14px; font-weight: bold; font-size: 0.9rem; white-space: nowrap; }
     .pill.searching { background: var(--wait-bg); color: var(--wait); }
     .pill.matched { background: var(--ok-bg); color: var(--primary); }
@@ -50,7 +62,9 @@
     .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.95rem; }
     .steps li::before { content: "・"; color: var(--muted); }
     .message { margin: 6px 0 0; padding: 10px 12px; border-left: 4px solid var(--primary); background: var(--no-bg); border-radius: 0 10px 10px 0; font-size: 0.9rem; }
-    .empty, .error { background: var(--card); border: 2px dashed var(--border); border-radius: 16px; padding: 20px; text-align: center; color: var(--muted); }
+    .empty, .error { background: var(--card); border: 2px dashed var(--border); border-radius: 18px; padding: 24px 20px; text-align: center; color: var(--muted); }
+    .empty b { display: block; font-size: 1.1rem; color: var(--text); margin-bottom: 4px; }
+    .empty span { display: block; font-size: 0.9rem; word-break: auto-phrase; text-wrap: balance; }
     .error { border-color: var(--alert); color: var(--alert); }
     .pass-box { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
     .pass-box[hidden] { display: none; }
@@ -73,10 +87,22 @@
 </div>
 
 <main>
-  <h1>困りごとの状況</h1>
-  <p class="lead">電話で受け付けた困りごとと、AI（調整係）がだれに声をかけたかを表示します。3秒ごとに新しくなります。</p>
+  <header class="hero">
+    <svg viewBox="0 0 640 640" aria-hidden="true">
+      <g fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round"><path d="M250 160 C 228 128, 272 104, 250 72"/><path d="M320 145 C 298 113, 342 89, 320 57"/><path d="M390 160 C 368 128, 412 104, 390 72"/></g>
+      <g fill="#ffffff"><circle cx="320" cy="340" r="135"/><circle cx="205" cy="370" r="85"/><circle cx="435" cy="370" r="85"/><circle cx="250" cy="260" r="80"/><circle cx="390" cy="260" r="80"/><rect x="150" y="370" width="340" height="110" rx="55"/></g>
+      <circle cx="270" cy="345" r="18" fill="#2a2f45"/><circle cx="370" cy="345" r="18" fill="#2a2f45"/>
+      <ellipse cx="240" cy="388" rx="24" ry="14" fill="#ff9e9e" opacity=".8"/><ellipse cx="400" cy="388" rx="24" ry="14" fill="#ff9e9e" opacity=".8"/>
+      <path d="M290 388 Q320 420 350 388" fill="none" stroke="#2a2f45" stroke-width="11" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h1>困りごとの状況</h1>
+      <p class="sub">ゆげ丸の電話から、ご近所の手伝いへ</p>
+    </div>
+  </header>
+  <p class="lead"><span>電話で受け付けた困りごとと、</span><span>AI（調整係）がだれに声をかけたかを表示します。</span><span>3秒ごとに新しくなります。</span></p>
 
-  <button id="callBtn" class="call-btn" type="button" hidden>ゆげ丸から電話をかける</button>
+  <button id="callBtn" class="call-btn" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>ゆげ丸から電話をかける</button>
   <p id="callStatus" role="status"></p>
 
   <section id="list" aria-live="polite"></section>
@@ -100,11 +126,13 @@
   function render(requests) {
     listEl.textContent = '';
     if (!requests.length) {
-      listEl.appendChild(el('div', 'empty', 'まだ困りごとはありません。電話で「〜に行かんばとけど…」と話すと、ここに出ます。'));
+      const empty = el('div', 'empty');
+      empty.append(el('b', '', 'まだ困りごとはありません'), el('span', '', '電話で「〜に行かんばとけど…」と話すと、ここに出ます。'));
+      listEl.appendChild(empty);
       return;
     }
     for (const r of requests) {
-      const card = el('article', 'card');
+      const card = el('article', 'card ' + r.status);
       const head = el('div', 'head');
       head.append(el('div', 'what', [r.category, r.when, r.where].filter(Boolean).join('・')), el('span', 'pill ' + r.status, STATUS[r.status] || r.status));
       card.append(head, el('p', 'detail', `${r.userName}（${r.area || '地区未定'}）：${r.detail}`));
@@ -112,7 +140,7 @@
 
       if (r.assessments.length) {
         const box = el('div');
-        box.append(el('p', 'section-title', 'AI（調整係）の判断'));
+        box.append(el('p', 'section-title', 'AI（調整係・Claude）の判断'));
         const ul = el('ul', 'judge');
         for (const a of r.assessments) {
           const li = el('li', a.fit ? 'fit' : '');
