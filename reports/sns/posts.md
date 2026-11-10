@@ -27,6 +27,9 @@ Anthropic のハッカソン「Built with Claude: Japan 2026」に出ました�
 
 つづきは画像をめくってください👉
 
+ハッカソンのページ（どなたでも見られます）
+https://cerebralvalley.ai/e/built-with-claude-japan2026
+
 #電話番AI #ゆげ丸 #BuiltwithClaude #Claude #ClaudeCode #ハッカソン #生成AI #雲仙市 #長崎 #見守り #地域の助け合い #ふりかえり
 
 ---
@@ -45,6 +48,8 @@ Anthropic のハッカソン「Built with Claude: Japan 2026」に出ました�
 ・6日間で得たもの
 
 添付の HTML をダウンロードして、ブラウザで開いてください。
+ハッカソンのページはこちらです：
+https://cerebralvalley.ai/e/built-with-claude-japan2026
 
 アンケートに協力してくださった55人のみなさん、本当にありがとうございました。「使ってみたい」「頑張ってください」の声が力になりました。
 今回学んだ Claude Code の使い方は、あらためて社内に共有します。
@@ -67,3 +72,6 @@ Anthropic のハッカソン「Built with Claude: Japan 2026」に出ました�
 次は、自分が当事者意識を持てる課題で、世の中に出せるサービスを作ります。
 
 アンケートに協力してくれたみなさん、話を聞かせてくださった地域の福祉関係の方、そして母（と父）に、心から感謝します。
+
+ハッカソンのページ（どなたでも見られます）
+https://cerebralvalley.ai/e/built-with-claude-japan2026

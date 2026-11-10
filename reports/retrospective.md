@@ -92,3 +92,5 @@
 ## このインタビューについて
 
 聞き手の「ゆげ丸」は、電話番AIで毎朝の電話を受け持つ AI の名前です。このインタビューは Claude Code の上で実際に一問一答で行い、答えは本人の言葉を読みやすく整えました。福祉関係の方は、先方の希望により団体名とお名前を伏せています。
+
+ハッカソンのページ：[Built with Claude: Japan 2026](https://cerebralvalley.ai/e/built-with-claude-japan2026)
