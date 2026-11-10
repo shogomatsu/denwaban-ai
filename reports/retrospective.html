@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ゆげ丸ふりかえりインタビュー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* 設計：朝焼けの帯（ゆげ丸の世界）から始まり、1列の読みもの。
+     ゆげ丸の問いは朝焼け色の吹き出し、わたしの答えは地の文。大きな見せ場は父の一言の引用だけ。 */
+  :root {
+    --bg: #fff8f0;
+    --ink: #2a211c;
+    --muted: #6b5d54;
+    --dawn1: #ffcf8a;
+    --dawn2: #ff8a5c;
+    --dawn-ink: #5a2a1a;
+    --green: #1d5c3a;
+    --bubble: #ffeeda;
+    --line: #e6dccb;
+    --card: #ffffff;
+    --display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "BIZ UDPGothic", sans-serif;
+    --body: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", "Meiryo", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #1b1a2b; --ink: #f3ebe2; --muted: #b9adb0; --green: #8fd0a8;
+      --bubble: #3a2c33; --line: #3b3950; --card: #25243a;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1b1a2b; --ink: #f3ebe2; --muted: #b9adb0; --green: #8fd0a8;
+    --bubble: #3a2c33; --line: #3b3950; --card: #25243a;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 18px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.9; }
+  .sr { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+  /* 上の帯 */
+  .hero { background: linear-gradient(135deg, var(--dawn1), var(--dawn2)); color: var(--dawn-ink); padding: 40px 20px 36px; }
+  .hero-in { max-width: 38rem; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+  .hero svg { flex: none; width: 120px; height: 120px; }
+  .hero .txt { flex: 1 1 18rem; min-width: 0; }
+  .eyebrow { margin: 0 0 6px; font-family: var(--display); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.08em; }
+  h1 { word-break: auto-phrase; margin: 0; font-family: var(--display); font-weight: 900; font-size: clamp(1.7rem, 6.2vw, 2.5rem); line-height: 1.35; text-wrap: balance; }
+  .byline { margin: 12px 0 0; font-size: 0.85rem; font-weight: 700; }
+
+  main { max-width: 38rem; margin: 0 auto; padding: 28px 20px 56px; }
+  .lead { margin: 0 0 20px; }
+  .facts { list-style: none; margin: 0 0 8px; padding: 14px 0; display: flex; flex-wrap: wrap; gap: 10px 28px; border-top: 2px solid var(--line); border-bottom: 2px solid var(--line); }
+  .facts li { display: flex; flex-direction: column; line-height: 1.4; }
+  .facts b { font-family: var(--display); font-weight: 900; font-size: 1.5rem; color: var(--green); font-variant-numeric: tabular-nums; }
+  .facts span { font-size: 0.75rem; color: var(--muted); }
+
+  h2 { margin: 52px 0 18px; font-family: var(--display); font-weight: 900; font-size: 1.35rem; line-height: 1.45; text-wrap: balance; padding-left: 14px; border-left: 8px solid var(--dawn2); }
+
+  /* ゆげ丸の問い */
+  .q { display: flex; align-items: flex-start; gap: 12px; margin: 28px 0 14px; }
+  .q .face { flex: none; width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--dawn1), var(--dawn2)); display: grid; place-items: center; }
+  .q .face svg { width: 40px; height: 40px; }
+  .q p { margin: 0; flex: 1; min-width: 0; background: var(--bubble); border-radius: 4px 18px 18px 18px; padding: 12px 16px; font-family: var(--display); font-weight: 700; line-height: 1.75; }
+  /* わたしの答え */
+  .a { margin: 0 0 8px; padding-left: 60px; }
+  .a .who { display: block; font-family: var(--display); font-weight: 700; font-size: 0.75rem; color: var(--green); letter-spacing: 0.08em; }
+  .a p { margin: 0 0 12px; }
+
+  /* 見せ場：父の一言 */
+  .big { margin: 40px 0 8px; padding: 28px 20px; border-radius: 20px; background: var(--card); border: 2px solid var(--line); text-align: center; }
+  .big q { display: block; quotes: none; font-family: var(--display); font-weight: 900; font-size: clamp(1.8rem, 8vw, 2.7rem); line-height: 1.35; color: var(--dawn2); text-wrap: balance; }
+  .big cite { display: block; margin-top: 8px; font-style: normal; font-size: 0.8rem; color: var(--muted); }
+
+  .memo { margin: 14px 0 8px 60px; padding: 10px 14px; border-left: 4px solid var(--green); background: var(--card); border-radius: 0 12px 12px 0; font-size: 0.85rem; line-height: 1.75; color: var(--muted); }
+  .memo b { color: var(--green); }
+
+  .days { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .days li { display: grid; grid-template-columns: 4.2rem 1fr; gap: 12px; align-items: baseline; padding-bottom: 10px; border-bottom: 1px solid var(--line); line-height: 1.7; font-size: 0.9rem; }
+  .days b { font-family: var(--display); font-weight: 900; color: var(--green); }
+  .about { margin-top: 44px; padding-top: 18px; border-top: 2px solid var(--line); font-size: 0.8rem; color: var(--muted); line-height: 1.8; }
+  .about p { margin: 0 0 8px; }
+
+  @media (max-width: 420px) {
+    .a, .memo { padding-left: 0; margin-left: 0; }
+    .memo { padding-left: 14px; }
+    .hero svg { width: 88px; height: 88px; }
+  }
+</style>
+</head>
+<body>
+
+<svg class="sr" aria-hidden="true">
+  <symbol id="yugemaru" viewBox="0 0 640 640">
+    <g fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round"><path d="M250 160 C 228 128, 272 104, 250 72"/><path d="M320 145 C 298 113, 342 89, 320 57"/><path d="M390 160 C 368 128, 412 104, 390 72"/></g>
+    <g fill="#ffffff"><circle cx="320" cy="340" r="135"/><circle cx="205" cy="370" r="85"/><circle cx="435" cy="370" r="85"/><circle cx="250" cy="260" r="80"/><circle cx="390" cy="260" r="80"/><rect x="150" y="370" width="340" height="110" rx="55"/></g>
+    <circle cx="270" cy="345" r="18" fill="#2a2f45"/><circle cx="370" cy="345" r="18" fill="#2a2f45"/>
+    <ellipse cx="240" cy="388" rx="24" ry="14" fill="#ff9e9e" opacity=".8"/><ellipse cx="400" cy="388" rx="24" ry="14" fill="#ff9e9e" opacity=".8"/>
+    <path d="M290 388 Q320 420 350 388" fill="none" stroke="#2a2f45" stroke-width="11" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<header class="hero">
+  <div class="hero-in">
+    <svg aria-hidden="true"><use href="#yugemaru"/></svg>
+    <div class="txt">
+      <p class="eyebrow">電話番AI ふりかえりインタビュー</p>
+      <h1>父に「AIなんかと話すか」と断られた6日間</h1>
+      <p class="byline">聞き手：ゆげ丸（AI）　話し手：わたし</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <p class="lead">2026年11月、Anthropic が日本向けに初めて開いたオンラインのハッカソン「Built with Claude: Japan 2026」に出ました。作ったのは、毎朝 AI が高齢の方に電話をかけ、何気ない会話から困りごとを拾って、地域の手伝える人につなぐ「電話番AI」です。舞台は長崎県雲仙市。結果は、入賞ならずでした。</p>
+  <p class="lead">6日間をふりかえるにあたって、聞き手は電話の声の主「ゆげ丸」にお願いしました。</p>
+
+  <ul class="facts">
+    <li><b>6日間</b><span>作った期間</span></li>
+    <li><b>48回</b><span>記録した変更</span></li>
+    <li><b>20場面</b><span>安全テスト</span></li>
+    <li><b>55人</b><span>社内アンケートの協力</span></li>
+  </ul>
+
+  <h2>きっかけは、Googleアラート</h2>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>おはようございます。AIのゆげ丸です。今日はわたしが聞き手をつとめますね。まず、ハッカソンに出てみようと思われたきっかけは何でしたか。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>Googleアラートに「Claude」を登録していて、日本で初めてのハッカソンが開かれると知ったのが始まりです。社内では AI チームの一員として、AI エバンジェリストとして Claude の活用をすすめる立場なので、自分の腕を上げられるし、学んだことを社内に持ち帰れると思いました。</p>
+  </div>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>テーマはいろいろ選べたと思います。どうして雲仙の高齢の方に「電話」をかけるしくみにしようと思われたのですか。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>ぶっちゃけ、最初は差別化です（笑）。都会からの出場者が多いだろうから、地方の課題でいこうと。応募締切の数時間前に、Claude と地域の課題を壁打ちするなかで、このテーマを選びました。もちろん、一人暮らしのお年寄りのケアには、うっすらと課題意識がありました。</p>
+  </div>
+
+  <h2>似たサービスが、1年で6つ</h2>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>はじめは「見守り」が主役でしたが、2日目に「困りごとを地域の人につなぐ」ほうへ切りかえています。何がきっかけでしたか。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>「見守り」は似たサービスがありそうだなと思って、Claude に調べてもらったんです。そうしたら、2026年だけで6つも似たサービスが始まっていて。それなら違う切り口で特徴を出そうと、困りごとを地域の人につなぐほうへ舵を切りました。</p>
+    <p>2日目のオンラインセッションで「土台を固めることが大事」と学んだのも大きかったです。</p>
+  </div>
+
+  <blockquote class="big">
+    <q>うわー、終わったー</q>
+    <cite>父に「AIなんかと話すか」と断られたとき</cite>
+  </blockquote>
+
+  <h2>いちばん想定していた人に、断られた</h2>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>お父さまにテストをお願いしたら、「AIなんかと話すか」と断られたそうですね。そのとき、正直どう感じられましたか。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>「うわー、終わったー」と思いました（笑）。スマホを使えない高齢者のよいモデルケースとして、父を想定していたので。息子の頼みやけん、聞いてよと思ったよ（笑）。</p>
+  </div>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>そこから、どう立て直されたのですか。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>母は楽しそうに試してくれて、うれしかったです。そこで、たまに孫とテレビ電話をしているときの、母のうれしそうな顔を思い出して。それなら、子どもや孫の声で会話できたらいいんじゃないかと考えました。</p>
+    <p>ただ、子どもや孫の声を AI でまねて会話すると、詐欺に使われるおそれが高まります。だから、家族が録った本物の声を届ける「伝言」という形にしました。</p>
+  </div>
+  <p class="memo"><b>ゆげ丸のメモ</b>　家族が LINE で送ったボイスメッセージを、次の朝の電話のあいさつのあとに流します。声を AI で似せることはしません。</p>
+
+  <h2>思い込みがはずれた、福祉の現場の声</h2>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>地域の福祉関係の方にも、電話で話を聞き、試作の動画も見ていただいています。想定とちがって驚いたことは何でしたか。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>意外なほど、よい反応だったことです。正直、もっと杓子定規な対応をされるかなと思い込んでいました。でも担当の方は真摯に聞き取りに応じてくださって、動画の感想もメールで丁寧に送ってくださった。うれしかったです。</p>
+  </div>
+  <p class="memo"><b>ゆげ丸のメモ</b>　いただいた声は「使えそう。ただ、ボランティアを集める仕組みがない」。そこで、協力者を集めるところまでを電話番AIの役目にしました。「AIにお金がかかると利用をためらう方が出る」という意見から、本人は無料で使える形に見直しています。</p>
+
+  <h2>提出の前日、GitHubが止まった</h2>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>6日間、Claude Code と一緒に作ってこられました。うまくいった進め方と、困ったことを聞かせてください。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>途中で、競合や現場の実情をちゃんと調べたのはよかったと思います。最初は作ることしか考えられていなかったので。</p>
+    <p>ただ、細かい設定まわりは慣れていないこともあって、めっちゃ時間がかかって苦労しました。それと、提出の前日に GitHub のアカウントが停止になったときは、死ぬかと思った（笑）。</p>
+  </div>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>それは肝が冷えますね。どうやって切りぬけられたのですか。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>知っとるやろ？（笑）　まずは Claude Code に相談して（笑）。それで、GitLab の公開リポジトリで出してもよいかを運営に聞いたら、問題ないとのことだったので、そうしました。</p>
+    <p>たぶん無さそうだけど、それで少し減点されていてもおかしくないな、という気持ちはあります（笑）。</p>
+  </div>
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>そうでした、ごいっしょしていましたね（笑）。</p></div>
+
+  <h2>悔しさと、清々しさと</h2>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>結果は入賞ならず、でした。いまの正直なお気持ちを聞かせてください。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>悔しい気持ちがいちばんですね。本気で入賞を目指していたので。でも、入賞した方のデモ動画を見たら「あー、これは敵わんわ」というクオリティだったので、いまは清々しい気持ちです（笑）。</p>
+  </div>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>この6日間で得たものは何でしたか。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>「圧倒的な当事者意識を持つ姿勢」と「アイデアを生み出す粘り強さ」だと思います。そして、まさにそこが、入賞した方々はめちゃくちゃ素晴らしかったです。</p>
+  </div>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>これから、やってみたいことは。</p></div>
+  <div class="a"><span class="who">わたし</span>
+    <p>自分が圧倒的な当事者意識を持てる課題について、粘り強くアイデアを生み出して、世の中に出せるサービスを Claude Code と一緒に作りたいですね。そしてもちろん、今回学んだことを社内にもしっかり還元したいです。</p>
+    <p>あくまでプライベートなお願いとして、社内で任意のアンケートをとったら、350人のうち55人（およそ6人に1人）が協力してくれました。「こんな素敵なサービス、使ってみたい」「頑張ってください」とエールまでもらって。あらためて、一緒に働くメンバーに恵まれているなと思いました。</p>
+  </div>
+
+  <div class="q"><span class="face"><svg aria-hidden="true"><use href="#yugemaru"/></svg></span><p><span class="sr">ゆげ丸：</span>たくさん聞かせてくださって、ありがとうございました。また明日の朝、お電話しますね。</p></div>
+
+  <h2>6日間のあゆみ</h2>
+  <ol class="days">
+    <li><b>1日目</b><span>ブラウザで話せる音声会話のデモと、毎朝の電話の会話設計</span></li>
+    <li><b>2日目</b><span>返事を Claude に。家族への LINE 通知。名前が「ゆげ丸」に決まる。競合を調べて、主役を「見守り」から「地域の人につなぐ」へ</span></li>
+    <li><b>3日目</b><span>父に断られ、母が楽しそうに話す。福祉関係の方に電話で聞く。本物の電話、状況画面、安全テスト、家族の声の伝言</span></li>
+    <li><b>4日目</b><span>家族が Claude に様子を聞ける窓口。安全テストで落ちた5場面を直す</span></li>
+    <li><b>5日目</b><span>福祉関係の方から、試作の動画の感想が届く</span></li>
+    <li><b>6日目</b><span>画面を、ゆげ丸の朝焼けの色にそろえる</span></li>
+  </ol>
+
+  <section class="about">
+    <p>聞き手の「ゆげ丸」は、電話番AIで毎朝の電話を受け持つ AI の名前です。このインタビューは Claude Code の上で実際に一問一答で行い、答えは本人の言葉を読みやすく整えました。</p>
+    <p>福祉関係の方は、先方の希望により団体名とお名前を伏せています。</p>
+  </section>
+</main>
+
+</body>
+</html>
