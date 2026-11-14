@@ -7,9 +7,9 @@
 
 「Built with Claude: Japan 2026」ハッカソンの作品です（2026年11月2日〜8日）。
 
-- デモ動画（3分）：【提出時に追記】
+- デモ動画（3分）：https://youtu.be/36b6hf0nEpc
 - 公開している画面：https://denwaban-ai.vercel.app （通話の画面）／ https://denwaban-ai.vercel.app/status.html （困りごとの状況画面）。どちらも合言葉が必要です
-- 仕様書：[docs/spec.md](docs/spec.md) ／ 競合調査：[docs/competitive-analysis.md](docs/competitive-analysis.md) ／ 会話設計：[docs/conversation-design.md](docs/conversation-design.md)
+- 仕様書：[docs/spec.md](docs/spec.md) ／ これから作る3つの機能（構想）：[docs/future.md](docs/future.md) ／ 安全チェックの結果：[docs/security-review.md](docs/security-review.md) ／ 競合調査：[docs/competitive-analysis.md](docs/competitive-analysis.md) ／ 会話設計：[docs/conversation-design.md](docs/conversation-design.md)
 
 ## 誰の、どんな壁を取り除くのか
 
@@ -69,7 +69,7 @@ sequenceDiagram
 | 本人が望まない依頼 | 本人が「頼む」と言ったときだけ依頼にする。同意の言葉そのものを記録し、なければ受け付けない |
 | 個人情報が広がる | 依頼の段階では地区・日時・内容だけ。名前・住所・電話番号は、引き受けた1人にだけ渡す |
 | AI ができない約束をする | 引き受ける人が決まるまで、「探してみますね」までしか言わない |
-| 医療の判断 | 体調は聞いて家族につなぐだけ。診断・薬・受診の判断はしない。緊急時は119番をすすめる |
+| 医療の判断 | 体調は聞いて家族につなぐだけ。医療のことは判断せず、家族や119番につなぐ。緊急時は119番をすすめる |
 | 詐欺と間違われる | 毎朝「AIのゆげ丸です」と名乗る。お金・口座・暗証番号は聞かない |
 | 家族の声の悪用 | 声を AI で似せない。流すのは、登録した家族が送った本物の録音だけ |
 | データの扱い | Supabase の全表で RLS をオン・許可ルールなし。サーバーの秘密キーだけが読み書きする。ログに名前・体調・困りごとの中身を出さない |
@@ -114,7 +114,9 @@ flowchart LR
 | 電話・ブラウザでの会話、同意をとって依頼にする | 毎朝の自動発信、電話に出ないときの再発信 |
 | 調整係が3人から理由つきで選び、LINE で依頼 →「引き受ける」で確定 | サロンで協力者を集める仕組み（QR コードで友だち追加） |
 | 家族への LINE 通知（体調・緊急・協力者が決まった） | 思い出ばなし（本人が「伝えてよか」と言った昔話を家族に届ける） |
-| 【提出時に更新：折り返しの電話、家族の声の伝言、電話に出ないときの通知、MCP】 | 災害時の安否確認、詐欺の相談 |
+| ゆげ丸からの折り返しの電話、家族の声の伝言、電話に出ないときの家族への通知 | 災害時の安否確認、詐欺の相談 |
+| 家族が Claude のアプリから様子を聞ける（MCP・読み取り専用） | 耳が遠い方など、電話が難しい方への対応 |
+| 安全テスト 20場面（Claude Opus 5.5 が採点。3回の平均 18.7 / 20） | 協力者の登録とボランティア保険の確認 |
 
 ## 試す
 
@@ -204,3 +206,5 @@ CLAUDE.md                   プロジェクト概要と開発方針
 ```
 
 最初のコミットは 2026年11月2日 20:50（日本時間）。それより前のコードは使っていません。
+
+リポジトリ：https://gitlab.com/m.shogo06/denwaban-ai （提出のとき GitHub のアカウントが停止中だったため、GitLab に置きました。復旧後、GitHub の https://github.com/shogomatsu/denwaban-ai にも同じ内容を置いています。ライセンスは MIT）
